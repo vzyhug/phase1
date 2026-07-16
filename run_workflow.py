@@ -6,7 +6,7 @@ import torch
 from src.data_prep.data_preparation import Data_Preparation
 from src.training.trainer import train_model
 from src.inference.ddim_sampler import DDIMDenoiser
-from src.evuluation import metrics
+from src.evaluation import metrics
 
 TEST_RECORDS = ['sel123', 'sel233', 'sel302', 'sel307', 'sel820', 'sel853',
                 'sel16420', 'sel16795', 'sel0106', 'sel0121', 'sel32',
