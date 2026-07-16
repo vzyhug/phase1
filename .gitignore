@@ -1,0 +1,13 @@
+.idea/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.DS_Store
+
+# Data and checkpoints might be large, ignoring them by default. 
+# The user can modify this if needed.
+data/
+checkpoints/
