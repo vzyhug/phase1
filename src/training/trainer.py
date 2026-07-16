@@ -3,8 +3,8 @@ import yaml
 import torch
 from torch.utils.data import DataLoader, Subset
 from sklearn.model_selection import train_test_split
-from .dataset import ECGDataset
-from .utils import train
+from src.training.dataset import ECGDataset
+from src.training.utils import train
 from src.models.main_model import DDPM
 from src.models.denoising_model_small import ConditionalModel
 

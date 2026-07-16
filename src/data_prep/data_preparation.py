@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from .resampler import resample_qt_db
-from .segmenter import segment_signals
-from .normalizer import normalize_segments
-from .synthesizer import synthesize_noisy
+from src.data_prep.resampler import resample_qt_db
+from src.data_prep.segmenter import segment_signals
+from src.data_prep.normalizer import normalize_segments
+from src.data_prep.synthesizer import synthesize_noisy
 
 def Data_Preparation(n_type=1, force_rebuild=False, test_records=None):
     """

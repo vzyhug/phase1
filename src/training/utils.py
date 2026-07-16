@@ -3,7 +3,7 @@ import torch
 from torch.optim import Adam
 from tqdm import tqdm
 import pickle
-import src.evuluation.metrics as metrics
+import src.evaluation.metrics as metrics
 from src.models.main_model import EMA
 from numpy.testing import verbose
 
