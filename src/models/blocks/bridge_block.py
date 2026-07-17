@@ -14,6 +14,8 @@ class BridgeBlock(nn.Module):
 
     def forward(self, x, alpha_bar):
         # alpha_bar: (B,) or scalar
+        # Ép phẳng alpha_bar về dạng 1D (Batch,) để tránh bị dư chiều -- CỰC QUAN TRỌNG
+        alpha_bar = alpha_bar.view(-1)
         emb = self.sinusoidal_embedding(alpha_bar)
         scale_shift = self.film(emb)   # (B, 2*features)
         scale, shift = scale_shift.chunk(2, dim=1)
