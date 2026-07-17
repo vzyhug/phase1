@@ -1,18 +1,22 @@
 import torch
 import yaml
 import numpy as np
+from src.models.unet_1d import UNet1D          # <-- thay vì ConditionalModel
 from src.models.main_model import DDPM
-from src.models.denoising_model_small import ConditionalModel
 
 class DDIMDenoiser:
     def __init__(self, config_path='configs/base.yaml', checkpoint='checkpoints/model.pth', device='cuda:0'):
         self.device = device
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
-        base_model = ConditionalModel(self.config['train']['feats']).to(device)
+        base_model = UNet1D(
+            in_channels=2,
+            base_channels=self.config['train']['feats'],
+            emb_dim=128
+        ).to(device)
         self.model = DDPM(base_model, self.config, device)
         state_dict = torch.load(checkpoint, map_location=device)
-        # Lọc bỏ các buffer không khớp (do khác số bước diffusion)
+        # Lọc bỏ các buffer không khớp (nếu có)
         state_dict = {k: v for k, v in state_dict.items() if k.startswith('model.')}
         self.model.load_state_dict(state_dict, strict=False)
         self.model.eval()
