@@ -265,7 +265,9 @@ class DDPM(nn.Module):
         """
         x_start = x_in
         B, C, L = x_start.shape
-        t = np.random.randint(1, self.num_steps + 1)
+
+        # Lấy ngẫu nhiên các giá trị t khác nhau cho từng mẫu trong Batch, trực tiếp trên thiết bị (GPU)
+        t = torch.randint(0, self.num_steps, (B,), device=x_start.device).long()
         continuous_sqrt_alpha_cumprod = torch.FloatTensor(
             np.random.uniform(
                 self.sqrt_alphas_cumprod_prev[t-1],
