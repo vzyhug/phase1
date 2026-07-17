@@ -5,10 +5,11 @@ from torch.utils.data import DataLoader, Subset
 from sklearn.model_selection import train_test_split
 from .dataset import ECGDataset
 from .utils import train
-from src.models.unet_1d import UNet1D       # <-- thay vì ConditionalModel
+from src.models.unet_1d import UNet1D
+from src.models.denoising_model_small import ConditionalModel
 from src.models.main_model import DDPM
 
-def train_model(config_path, device='cuda:0'):
+def train_model(config_path, model_choice=None, device='cuda:0'):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
@@ -25,12 +26,27 @@ def train_model(config_path, device='cuda:0'):
     train_loader = DataLoader(train_set, batch_size=config['train']['batch_size'], shuffle=True, drop_last=True)
     val_loader = DataLoader(val_set, batch_size=config['train']['batch_size'], shuffle=False, drop_last=True)
 
-    # Khởi tạo UNet1D thay vì ConditionalModel
-    base_model = UNet1D(
-        in_channels=2,                      # concat x_t + cond
-        base_channels=config['train']['feats'],
-        emb_dim=128
-    ).to(device)
+    # Mặc định sử dụng 1D U-Net nếu không được truyền vào
+    if model_choice is None:
+        model_choice = '1'
+
+    if str(model_choice) == '1':
+        print("-> Đã chọn: 1D U-Net")
+        base_model = UNet1D(
+            in_channels=2,                      # concat x_t + cond
+            base_channels=config['train']['feats'],
+            emb_dim=128
+        ).to(device)
+    elif str(model_choice) == '2':
+        print("-> Đã chọn: ConditionalModel (Bài báo gốc)")
+        base_model = ConditionalModel(feats=config['train']['feats']).to(device)
+    else:
+        print("-> Lựa chọn không hợp lệ. Mặc định sử dụng: 1D U-Net")
+        base_model = UNet1D(
+            in_channels=2,
+            base_channels=config['train']['feats'],
+            emb_dim=128
+        ).to(device)
 
     model = DDPM(base_model, config, device)
 

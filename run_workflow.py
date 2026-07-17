@@ -12,7 +12,7 @@ TEST_RECORDS = ['sel123', 'sel233', 'sel302', 'sel307', 'sel820', 'sel853',
                 'sel16420', 'sel16795', 'sel0106', 'sel0121', 'sel32',
                 'sel49', 'sel14046', 'sel15815']
 
-def main(mode):
+def main(mode, model_choice=None):
     if mode == 'preprocess':
         print("=== Preprocessing: Generating synthesized data ===")
         # Gọi Data_Preparation sẽ tự động thực hiện resample, segment, normalize, synthesize
@@ -22,7 +22,7 @@ def main(mode):
 
     elif mode == 'train':
         print("=== Training model ===")
-        train_model('configs/base.yaml', device='cuda:0' if torch.cuda.is_available() else 'cpu')
+        train_model('configs/base.yaml', model_choice=model_choice, device='cuda:0' if torch.cuda.is_available() else 'cpu')
 
     elif mode == 'infer':
         print("=== Running inference on a sample ===")
@@ -42,5 +42,6 @@ def main(mode):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', choices=['preprocess', 'train', 'infer'], default='preprocess')
+    parser.add_argument('--model', choices=['1', '2'], default='1', help='[1] 1D U-Net, [2] ConditionalModel (Bài báo gốc)')
     args = parser.parse_args()
-    main(args.mode)
+    main(args.mode, args.model)
