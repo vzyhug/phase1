@@ -103,8 +103,11 @@ class DDPM(nn.Module):
                              to_torch((1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
         
     def predict_start_from_noise(self, x_t, t, noise):
-        return self.sqrt_recip_alphas_cumprod[t] * x_t - \
-               self.sqrt_recipm1_alphas_cumprod[t] * noise
+        # Nắn lại chiều tensor hệ số thành (Batch, 1, 1) để nhân đúng với tensor tín hiệu 3D
+        coef1 = self.sqrt_recip_alphas_cumprod[t].view(-1, 1, 1)
+        coef2 = self.sqrt_recipm1_alphas_cumprod[t].view(-1, 1, 1)
+        
+        return coef1 * x_t - coef2 * noise
     
     def q_posterior(self, x_start, x_t, t):
         posterior_mean = self.posterior_mean_coef1[t] * x_start + \
