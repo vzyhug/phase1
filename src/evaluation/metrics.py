@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+import torch.nn.functional as F
 from sklearn.metrics.pairwise import cosine_similarity
 
 def SSD(y,y_pred):
@@ -39,3 +41,25 @@ def SNR(y1, y2):
 
 def SNR_improvement(y_in, y_out, y_clean):
     return SNR(y_clean, y_out) - SNR(y_clean, y_in)
+
+def calculate_metrics(clean,denoised):
+    # Đưa tín hiệu về mảng 2D (Batch, Chiều dài tín hiệu)
+    clean = clean.view(clean.shape[0], -1)
+    denoised = denoised.view(denoised.shape[0], -1)
+
+    # 1. RMSE (Sai số toàn phương trung bình)
+    mse = torch.mean((clean - denoised) ** 2, dim=1)
+    rmse = torch.sqrt(mse).mean().item()
+
+    # 2. SNR (Tỷ lệ tín hiệu trên nhiễu)
+    signal_power = torch.sum(clean ** 2, dim=1)
+    noise_power = torch.sum((clean - denoised) ** 2, dim=1)
+    snr = (10 * torch.log10(signal_power / (noise_power + 1e-8))).mean().item()
+
+    # 3. PRD (Tỷ lệ phần trăm sai khác)
+    prd = (torch.sqrt(noise_power / (signal_power + 1e-8)) * 100).mean().item()
+
+    # 4. Cosine Similarity (Độ tương đồng Cosin)
+    cos_sim = F.cosine_similarity(clean, denoised, dim=1).mean().item()
+
+    return rmse, snr, prd, cos_sim
