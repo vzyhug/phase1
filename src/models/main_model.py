@@ -268,15 +268,15 @@ class DDPM(nn.Module):
 
         # Lấy ngẫu nhiên các giá trị t khác nhau cho từng mẫu trong Batch, trực tiếp trên thiết bị (GPU)
         t = torch.randint(0, self.num_steps, (B,), device=x_start.device).long()
-        continuous_sqrt_alpha_cumprod = torch.FloatTensor(
-            np.random.uniform(
-                self.sqrt_alphas_cumprod_prev[t-1],
-                self.sqrt_alphas_cumprod_prev[t],
-                size=B
-            )
-        ).to(x_start.device)
+        # 1. Chuyển mảng NumPy sang PyTorch Tensor và đẩy lên cùng GPU với t
+        sqrt_alphas_prev_tensor = torch.tensor(self.sqrt_alphas_cumprod_prev, dtype=torch.float32, device=t.device)
+        # 2. Lấy giới hạn dưới và trên. 
+        # (Lưu ý: Do t giờ chạy từ 0 đến num_steps-1, ta dùng chỉ số t và t+1 để thay thế cho t-1 và t nhằm tránh lỗi âm)
+        lower = sqrt_alphas_prev_tensor[t]
+        upper = sqrt_alphas_prev_tensor[t+1]
+        # 3. Sinh số ngẫu nhiên uniform hoàn toàn bằng PyTorch trực tiếp trên GPU
+        continuous_sqrt_alpha_cumprod = lower + torch.rand(B, device=t.device) * (upper - lower)
         continuous_sqrt_alpha_cumprod = continuous_sqrt_alpha_cumprod.view(B, -1)
-
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_noisy = self.q_sample(
             x_start=x_start, 
