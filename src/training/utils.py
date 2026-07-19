@@ -80,7 +80,7 @@ def train(model, config, train_loader, device, valid_loader=None, valid_epoch_in
                         avg_loss_valid += loss.item()
 
                         # Trích xuất tín hiệu sạch để đo các chỉ số vật lý
-                        denoised_signal = model.denoising(noisy_batch)
+                        denoised_signal = model.denoising(noisy_batch,use_ddim=True,ddim_steps=15)
                         rmse, snr, prd, cos = metrics.calculate_metrics(clean_batch, denoised_signal)
                         
                         total_rmse += rmse
