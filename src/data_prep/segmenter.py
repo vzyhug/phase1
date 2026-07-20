@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-def segment_signals(input_dir, output_dir, seg_len=512, stride_train=256, stride_test=512, test_records=None):
+def segment_signals(input_dir, output_dir, seg_len=512, stride_train=32, stride_test=128, test_records=None):
     os.makedirs(output_dir, exist_ok=True)
     all_segments, all_labels = [], []
     for f in os.listdir(input_dir):
