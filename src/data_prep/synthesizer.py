@@ -15,8 +15,16 @@ def synthesize_noisy(clean_segments, noise_dir, output_dir, delta_range=(0.2, 2.
         path = os.path.join(noise_dir, n_type)
         try:
             # Lấy kênh đầu tiên
-            sig, _ = wfdb.rdsamp(path)
-            noises[n_type] = sig[:, 0]
+            rec = wfdb.rdrecord(path)
+            sig = rec.p_signal[:, 0]
+            current_fs = rec.fs
+            if current_fs != 500:
+                # Noi suy len 500Hz
+                num_samples = int(len(sig) * 500 / current_fs)
+                x_old = np.linspace(0, len(sig), len(sig))
+                x_new = np.linspace(0, len(sig), num_samples)
+                sig = np.interp(x_new, x_old, sig)
+            noises[n_type] = sig
         except Exception as e:
             print(f"Warning: Could not load {path} - {e}")
             
@@ -38,7 +46,12 @@ def synthesize_noisy(clean_segments, noise_dir, output_dir, delta_range=(0.2, 2.
         scale = np.sqrt(power_clean / power_noise) if power_noise > 0 else 1.0
         
         delta = np.random.uniform(*delta_range)
-        noise_scaled = noise_patch * scale * delta
+        noise_scaled = (noise_patch * scale * delta)
+        
+        # Expand dims for 12 channels broadcast if seg is multi-channel
+        if seg.ndim == 2:
+            noise_scaled = noise_scaled[:, np.newaxis]
+            
         noisy = seg + noise_scaled
         
         noisy_list.append(noisy.astype(np.float32))

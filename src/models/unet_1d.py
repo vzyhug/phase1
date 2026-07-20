@@ -7,9 +7,9 @@ class UNet1D(nn.Module):
     1D U‑Net với 4 levels, skip connections, HNF blocks,
     Bridge FiLM (timestep), và Self‑Attention tại bottleneck.
     """
-    def __init__(self, in_channels=2, base_channels=64, emb_dim=128):
+    def __init__(self, in_channels=24, base_channels=64, emb_dim=128, out_channels=12):
         """
-        in_channels = 2 vì concat x_t và condition (noisy observation)
+        in_channels = 24 vì concat x_t (12 channels) và condition (12 channels)
         """
         super().__init__()
         # ---------- ENCODER ----------
@@ -48,7 +48,7 @@ class UNet1D(nn.Module):
         self.dec2 = HNFBlock(base_channels*2, base_channels)     # concat với skip từ enc1
 
         # Output
-        self.final = nn.Conv1d(base_channels, 1, kernel_size=1)
+        self.final = nn.Conv1d(base_channels, out_channels, kernel_size=1)
 
     def forward(self, x, cond, noise_scale):
         """

@@ -8,9 +8,10 @@ def segment_signals(input_dir, output_dir, seg_len=512, stride_train=256, stride
         if not f.endswith('.npy'): continue
         record = f[:-4]
         data = np.load(os.path.join(input_dir, f))
-        if data.ndim == 2:
-            data = data[:, 0]   # lấy kênh đầu
-        stride = stride_test if record in test_records else stride_train
+        if data.ndim == 2 and data.shape[1] == 1:
+            data = data[:, 0]   # Nếu lỡ có shape (N, 1) thì bóp lại
+        # Không slice channel đầu tiên nữa, để giữ 12 đạo trình
+        stride = stride_test if record in (test_records or []) else stride_train
         for start in range(0, len(data) - seg_len + 1, stride):
             seg = data[start:start+seg_len]
             all_segments.append(seg.astype(np.float32))

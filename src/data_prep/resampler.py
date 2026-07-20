@@ -3,7 +3,7 @@ import wfdb
 import numpy as np
 from scipy import signal
 
-def resample_qt_db(input_dir, output_dir, target_fs=360):
+def process_ludb(input_dir, output_dir, target_fs=500):
     os.makedirs(output_dir, exist_ok=True)
     for file in os.listdir(input_dir):
         if file.endswith('.hea'):
@@ -21,4 +21,4 @@ def resample_qt_db(input_dir, output_dir, target_fs=360):
             for ch in range(sig.shape[1]):
                 sig_resampled[:, ch] = np.interp(x_new, x_old, sig[:, ch])
             np.save(os.path.join(output_dir, f'{record_name}.npy'), sig_resampled)
-    print(f"Resampling completed. Output: {output_dir}")
+    print(f"Processing completed. Output: {output_dir}")

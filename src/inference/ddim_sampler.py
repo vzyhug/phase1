@@ -10,9 +10,10 @@ class DDIMDenoiser:
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         base_model = UNet1D(
-            in_channels=2,
+            in_channels=24,
             base_channels=self.config['train']['feats'],
-            emb_dim=128
+            emb_dim=128,
+            out_channels=12
         ).to(device)
         self.model = DDPM(base_model, self.config, device)
         state_dict = torch.load(checkpoint, map_location=device)
@@ -23,7 +24,8 @@ class DDIMDenoiser:
 
     def denoise(self, noisy_signal, ddim_steps=50, eta=0.0, num_shots=1):
         if isinstance(noisy_signal, np.ndarray):
-            noisy_tensor = torch.FloatTensor(noisy_signal).unsqueeze(0).unsqueeze(0).to(self.device)
+            # noisy_signal có shape (512, 12) -> (1, 12, 512)
+            noisy_tensor = torch.FloatTensor(noisy_signal).unsqueeze(0).permute(0, 2, 1).to(self.device)
         else:
             noisy_tensor = noisy_signal.to(self.device)
         with torch.no_grad():

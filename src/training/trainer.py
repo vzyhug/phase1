@@ -34,19 +34,21 @@ def train_model(config_path, model_choice=None, device='cuda:0'):
     if str(model_choice) == '1':
         print("-> Đã chọn: 1D U-Net")
         base_model = UNet1D(
-            in_channels=2,                      # concat x_t + cond
+            in_channels=24,                      # concat x_t (12) + cond (12)
             base_channels=config['train']['feats'],
-            emb_dim=128
+            emb_dim=128,
+            out_channels=12
         ).to(device)
     elif str(model_choice) == '2':
         print("-> Đã chọn: ConditionalModel (Bài báo gốc)")
-        base_model = ConditionalModel(feats=config['train']['feats']).to(device)
+        base_model = ConditionalModel(feats=config['train']['feats'], in_channels=12, out_channels=12).to(device)
     else:
         print("-> Lựa chọn không hợp lệ. Mặc định sử dụng: 1D U-Net")
         base_model = UNet1D(
-            in_channels=2,
+            in_channels=24,
             base_channels=config['train']['feats'],
-            emb_dim=128
+            emb_dim=128,
+            out_channels=12
         ).to(device)
 
     model = DDPM(base_model, config, device)

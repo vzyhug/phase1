@@ -12,9 +12,10 @@ def stft_loss(pred, target, n_fft=128, hop_length=64):
     """
     Tính MSE loss trên phổ STFT giữa pred và target.
     """
-    # (B, 1, L) -> (B, L)
-    pred = pred.squeeze(1)
-    target = target.squeeze(1)
+    # (B, C, L) -> (B*C, L)
+    B, C, L = pred.shape
+    pred = pred.view(-1, L)
+    target = target.view(-1, L)
     
     # STFT: returns (B, freq_bins, time_frames, 2)
     spec_pred = torch.stft(pred, n_fft=n_fft, hop_length=hop_length, 

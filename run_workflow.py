@@ -8,9 +8,7 @@ from src.training.trainer import train_model
 from src.inference.ddim_sampler import DDIMDenoiser
 from src.evaluation import metrics
 
-TEST_RECORDS = ['sel123', 'sel233', 'sel302', 'sel307', 'sel820', 'sel853',
-                'sel16420', 'sel16795', 'sel0106', 'sel0121', 'sel32',
-                'sel49', 'sel14046', 'sel15815']
+TEST_RECORDS = [str(i) for i in range(180, 201)]
 
 def main(mode, model_choice=None):
     if mode == 'preprocess':
@@ -32,12 +30,19 @@ def main(mode, model_choice=None):
         denoiser = DDIMDenoiser(config_path='configs/base.yaml',
                                 checkpoint='checkpoints/model.pth')
         recon = denoiser.denoise(noisy_sample, ddim_steps=50, eta=0.0, num_shots=1)
-        # Tính metrics
-        ssd = metrics.SSD(clean_sample.reshape(1, -1, 1), recon.reshape(1, -1, 1))[0]
-        mad = metrics.MAD(clean_sample.reshape(1, -1, 1), recon.reshape(1, -1, 1))[0]
-        prd = metrics.PRD(clean_sample.reshape(1, -1, 1), recon.reshape(1, -1, 1))[0]
-        cos = metrics.COS_SIM(clean_sample.reshape(1, -1, 1), recon.reshape(1, -1, 1))[0][0][0]
-        print(f"SSD: {ssd:.4f}, MAD: {mad:.4f}, PRD: {prd:.2f}%, Cosine: {cos:.4f}")
+        # clean_sample is (512, 12), recon is (12, 512) after squeeze
+        # Transpose clean_sample to match (12, 512)
+        clean_12 = clean_sample.T
+        
+        # Calculate metrics for each channel then average
+        ssd = np.mean(metrics.SSD(clean_12, recon))
+        mad = np.mean(metrics.MAD(clean_12, recon))
+        prd = np.mean(metrics.PRD(clean_12, recon))
+        
+        # COS_SIM requires 3D or specific handling? Let's just expand dims to (12, 512, 1) for the existing function
+        cos = np.mean(metrics.COS_SIM(clean_12[..., np.newaxis], recon[..., np.newaxis]))
+        
+        print(f"Mean across 12 channels - SSD: {ssd:.4f}, MAD: {mad:.4f}, PRD: {prd:.2f}%, Cosine: {cos:.4f}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

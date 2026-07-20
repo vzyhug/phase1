@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from src.data_prep.resampler import resample_qt_db
+from src.data_prep.resampler import process_ludb
 from src.data_prep.segmenter import segment_signals
 from src.data_prep.normalizer import normalize_segments
 from src.data_prep.synthesizer import synthesize_noisy
@@ -24,9 +24,9 @@ def Data_Preparation(n_type=1, force_rebuild=False, test_records=None):
     else:
         print("Preprocessing data from scratch...")
         # 1. Resample
-        resample_qt_db('data/raw/qt_database', 'data/processed/clean_360hz')
+        process_ludb('data/raw/ludb_database', 'data/processed/clean_500hz')
         # 2. Segment
-        seg, labels = segment_signals('data/processed/clean_360hz', 'data/processed/segments_512',
+        seg, labels = segment_signals('data/processed/clean_500hz', 'data/processed/segments_512',
                                       test_records=test_records or [])
         # 3. Normalize
         seg_norm = normalize_segments(seg)
@@ -56,10 +56,11 @@ def Data_Preparation(n_type=1, force_rebuild=False, test_records=None):
         from sklearn.model_selection import train_test_split
         X_train, X_test, y_train, y_test = train_test_split(clean, noisy, test_size=0.3, random_state=42)
 
-    # Đổi shape từ (N, L) -> (N, L, 1) vì model mong đợi kênh cuối
-    X_train = X_train[..., np.newaxis]
-    y_train = y_train[..., np.newaxis]
-    X_test = X_test[..., np.newaxis]
-    y_test = y_test[..., np.newaxis]
+    # Expand dims fallback for 1 channel (if somehow we have 1 channel data without channel dim)
+    if X_train.ndim == 2:
+        X_train = X_train[..., np.newaxis]
+        y_train = y_train[..., np.newaxis]
+        X_test = X_test[..., np.newaxis]
+        y_test = y_test[..., np.newaxis]
 
     return X_train, y_train, X_test, y_test
