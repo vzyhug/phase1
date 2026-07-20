@@ -38,6 +38,11 @@ def Data_Preparation(n_type=1, force_rebuild=False, test_records=None):
 
     # Phân chia train/test dựa trên labels
     if labels is not None:
+        # Căn chỉnh kích thước labels với clean/noisy do augmentation (x3 lần)
+        if len(labels) != len(clean):
+            num_aug = len(clean) // len(labels)
+            labels = np.repeat(labels, num_aug)
+            
         # labels là mảng string, ta phân chia theo record
         unique_records = np.unique(labels)
         # Giả sử test_records đã được truyền vào, nếu không thì dùng danh sách mặc định
