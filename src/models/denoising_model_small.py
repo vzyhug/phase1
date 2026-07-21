@@ -11,7 +11,7 @@ class Conv1d(nn.Conv1d):
         super().__init__(*args,**kwargs)
         self.reset_parameters()
     def reset_parameters(self):
-        nn.init.kaiming_normal(self.weight)
+        nn.init.kaiming_normal_(self.weight)
         nn.init.zeros_(self.bias)
 
 class PositionalEncoding(nn.Module):
@@ -45,7 +45,7 @@ class FeatureWiseAffine(nn.Module):
 
 class HNFBlock(nn.Module):
     def __init__(self,input_size,hidden_size,dilation):
-        super.__init__()
+        super().__init__()
 
         self.filters = nn.ModuleList(
             [Conv1d(input_size,hidden_size//4,3,dilation=dilation,padding=1*dilation,padding_mode='reflect'),
