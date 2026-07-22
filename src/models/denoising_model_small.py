@@ -63,9 +63,14 @@ class HNFBlock(nn.Module):
         for layer in self.filters:
             filts.append(layer(x))
         filts = torch.cat(filts,dim=1)
-        nfilts , filts = self.conv_1(filts.chunk(2,dim=1))
-        filts = F.leaky_relu(torch.cat([self.norm(nfilts)],dim=1),0.2)
-        filts = F.leaky_relu(self.conv_2(filts),0.2)
+        
+        # Đã sửa 1: Đưa hàm chunk ra ngoài ngoặc của conv_1
+        nfilts , filts = self.conv_1(filts).chunk(2, dim=1)
+        
+        # Đã sửa 2: Thêm biến filts vào trong danh sách của hàm cat để không bị mất kênh
+        filts = F.leaky_relu(torch.cat([self.norm(nfilts), filts], dim=1), 0.2)
+        
+        filts = F.leaky_relu(self.conv_2(filts), 0.2)
         return filts + residual
 
 class Bridge(nn.Module):

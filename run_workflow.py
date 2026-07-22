@@ -44,9 +44,14 @@ def main(mode, model_choice=None):
         
         print(f"Mean across 12 channels - SSD: {ssd:.4f}, MAD: {mad:.4f}, PRD: {prd:.2f}%, Cosine: {cos:.4f}")
 
+    elif mode == 'eval':
+        print("=== Running evaluation and comparison ===")
+        from evaluate_and_plot import evaluate_and_plot
+        evaluate_and_plot()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['preprocess', 'train', 'infer'], default='preprocess')
+    parser.add_argument('--mode', choices=['preprocess', 'train', 'infer', 'eval'], default='preprocess')
     parser.add_argument('--model', choices=['1', '2'], default='1', help='[1] 1D U-Net, [2] ConditionalModel (Bài báo gốc)')
     args = parser.parse_args()
     main(args.mode, args.model)
