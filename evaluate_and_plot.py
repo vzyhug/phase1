@@ -116,7 +116,7 @@ def evaluate_and_plot():
             if name in results and results[name] is not None:
                 ax.plot(time_axis, results[name][i], label=name, color=colors[name], linewidth=1.5, alpha=0.8)
             
-        ax.set_title(f"Đạo trình: {channels[i]}")
+        ax.set_title(f"Lead: {channels[i]}")
         ax.legend(loc='upper right', fontsize=8)
         ax.grid(True, linestyle='--', alpha=0.6)
         
