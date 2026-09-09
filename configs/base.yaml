@@ -3,7 +3,7 @@
 
 train:
   feats: 80
-  epochs: 10
+  epochs: 30
   batch_size: 96
   lr: 1.0e-4
 
