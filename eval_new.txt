@@ -1,0 +1,172 @@
+1. Một mẫu dữ liệu là gì?                                                                                                                                      
+                                                                                                                                                                 
+  Một mẫu là một beat ECG, không phải cả record ECG dài.                                                                                                         
+                                                                                                                                                                 
+  Mỗi beat có dạng:                                                                                                                                              
+                                                                                                                                                                 
+  độ dài: 512 điểm mẫu                                                                                                                                           
+  số kênh: 1                                                                                                                                                     
+  tần số lấy mẫu: 360 Hz                                                                                                                                         
+                                                                                                                                                                 
+  Nên shape logic của một beat là:                                                                                                                               
+                                                                                                                                                                 
+  512 × 1                                                                                                                                                        
+                                                                                                                                                                 
+  Khi đưa vào PyTorch, dữ liệu được đổi về dạng:
+
+  1 × 512                                                                                                                                                        
+                                                                                                                                                                 
+  Tức là:                                                                                                                                                        
+                                                                                                                                                                 
+  [channel, length]                                                                                                                                              
+                                                                                                                                                                 
+  2. Bộ dữ liệu test dùng để tính metrics gồm gì?                                                                                                                
+                                                                                                                                                                 
+  Mỗi mẫu test gồm một cặp:                                                                                                                                      
+                                                                                                                                                                 
+  (clean ECG, noisy ECG)                                                                                                                                         
+                                                                                                                                                                 
+  Trong đó:                                                                                                                                                      
+                                                                                                                                                                 
+  clean ECG = beat ECG sạch từ QT Database                                                                                                                       
+  noisy ECG = clean ECG + baseline wander noise                                                                                                                  
+                                                                                                                                                                 
+  Khi model chạy xong, có thêm:                                                                                                                                  
+                                                                                                                                                                 
+  denoised ECG = output của model                                                                                                                                
+                                                                                                                                                                 
+  Vậy metrics được tính trên 3 tín hiệu:                                                                                                                         
+                                                                                                                                                                 
+  clean    : ECG sạch gốc                                                                                                                                        
+  noisy    : ECG đã cộng nhiễu                                                                                                                                   
+  denoised : ECG sau khử nhiễu                                                                                                                                   
+                                                                                                                                                                 
+  3. Shape dữ liệu                                                                                                                                               
+                                                                                                                                                                 
+  Nếu gọi số beat test là N_test, thì:                                                                                                                           
+                                                                                                                                                                 
+  y_test shape = (N_test, 512, 1)                                                                                                                                
+  X_test shape = (N_test, 512, 1)                                                                                                                                
+                                                                                                                                                                 
+  Trong đó:                                                                                                                                                      
+                                                                                                                                                                 
+  y_test = clean ECG                                                                                                                                             
+  X_test = noisy ECG                                                                                                                                             
+                                                                                                                                                                 
+  Sau khi chuyển sang tensor để đưa vào model:                                                                                                                   
+                                                                                                                                                                 
+  y_test shape = (N_test, 1, 512)                                                                                                                                
+  X_test shape = (N_test, 1, 512)                                                                                                                                
+                                                                                                                                                                 
+  Khi chạy evaluation, batch size là:                                                                                                                            
+                                                                                                                                                                 
+  batch_size = 50                                                                                                                                                
+                                                                                                                                                                 
+  Nên mỗi batch có dạng:                                                                                                                                         
+                                                                                                                                                                 
+  clean_batch shape = (50, 1, 512)                                                                                                                               
+  noisy_batch shape = (50, 1, 512)                                                                                                                               
+  output shape      = (50, 1, 512)                                                                                                                               
+                                                                                                                                                                 
+  Trước khi tính metrics, code đổi lại thành:                                                                                                                    
+                                                                                                                                                                 
+  clean    shape = (50, 512, 1)                                                                                                                                  
+  noisy    shape = (50, 512, 1)                                                                                                                                  
+  denoised shape = (50, 512, 1)                                                                                                                                  
+                                                                                                                                                                 
+  4. Nguồn clean ECG
+                                                                                                                                                                 
+  Clean ECG lấy từ QT Database.                                                                                                                                  
+                                                                                                                                                                 
+  Tập test gồm các record:                                                                                                                                       
+                                                                                                                                                                 
+  sel123                                                                                                                                                         
+  sel233                                                                                                                                                         
+  sel302                                                                                                                                                         
+  sel307                                                                                                                                                         
+  sel820                                                                                                                                                         
+  sel853                                                                                                                                                         
+  sel16420                                                                                                                                                       
+  sel16795                                                                                                                                                       
+  sele0106                                                                                                                                                       
+  sele0121                                                                                                                                                       
+  sel32                                                                                                                                                          
+  sel49                                                                                                                                                          
+  sel14046                                                                                                                                                       
+  sel15814                                                                                                                                                       
+                                                                                                                                                                 
+  Từ các record này, chương trình cắt ra nhiều beat ECG. Beat nào dài hơn giới hạn cho phép thì bị bỏ qua.                                                       
+                                                                                                                                                                 
+  5. Nguồn noisy ECG                                                                                                                                             
+                                                                                                                                                                 
+  Noisy ECG không có sẵn trực tiếp. Nó được tạo bằng cách cộng nhiễu vào clean ECG.                                                                              
+                                                                                                                                                                 
+  Công thức:                                                                                                                                                     
+                                                                                                                                                                 
+  noisy ECG = clean ECG + alpha × noise                                                                                                                          
+                                                                                                                                                                 
+  Nhiễu dùng ở đây là:                                                                                                                                           
+                                                                                                                                                                 
+  baseline wander noise                                                                                                                                          
+                                                                                                                                                                 
+  lấy từ MIT-BIH Noise Stress Test Database.                                                                                                                     
+                                                                                                                                                                 
+  Mỗi đoạn noise cũng có độ dài:                                                                                                                                 
+                                                                                                                                                                 
+  512 điểm mẫu                                                                                                                                                   
+                                                                                                                                                                 
+  để khớp với beat ECG sạch.                                                                                                                                     
+                                                                                                                                                                 
+  6. Mức nhiễu                                                                                                                                                   
+                                                                                                                                                                 
+  Mỗi beat được gán một mức nhiễu ngẫu nhiên:                                                                                                                    
+                                                                                                                                                                 
+  noise level ∈ [0.2, 1.99]                                                                                                                                      
+                                                                                                                                                                 
+  Mức này được dùng để scale nhiễu trước khi cộng vào ECG sạch.                                                                                                  
+                                                                                                                                                                 
+  Bảng kết quả chia theo các khoảng:                                                                                                                             
+                                                                                                                                                                 
+  ALL                                                                                                                                                            
+  0.2 - 0.6                                                                                                                                                      
+  0.6 - 1.0                                                                                                                                                      
+  1.0 - 1.5                                                                                                                                                      
+  1.5 - 2.0                                                                                                                                                      
+                                                                                                                                                                 
+  ALL nghĩa là toàn bộ beat test, không phân biệt mức nhiễu.                                                                                                     
+                                                                                                                                                                 
+  7. noise_type                                                                                                                                                  
+                                                                                                                                                                 
+  Có 2 bộ test noise:
+                                                                                                                                                                 
+  noise_type = 1                                                                                                                                                 
+  noise_type = 2                                                                                                                                                 
+                                                                                                                                                                 
+  Nhưng cả hai đều là baseline wander. Chúng chỉ khác cách chọn channel và đoạn nhiễu.                                                                           
+                                                                                                                                                                 
+  Evaluation chạy cả hai, rồi gộp metric lại.                                                                                                                    
+                                                                                                                                                                 
+  8. Dữ liệu thực sự đưa vào từng metric                                                                                                                         
+                                                                                                                                                                 
+  Với mỗi beat:                                                                                                                                                  
+                                                                                                                                                                 
+  SSD(clean, denoised)                                                                                                                                           
+  MAD(clean, denoised)                                                                                                                                           
+  PRD(clean, denoised)                                                                                                                                           
+  Cosine similarity(clean, denoised)                                                                                                                             
+  SNR in = SNR(clean, noisy)                                                                                                                                     
+  SNR out = SNR(clean, denoised)                                                                                                                                 
+  SNR improvement = SNR out - SNR in                                                                                                                             
+                                                                                                                                                                 
+  Nói ngắn gọn nhất:                                                                                                                                             
+                                                                                                                                                                 
+  Một dòng dữ liệu để tính metric gồm:                                                                                                                           
+                                                                                                                                                                 
+  clean ECG    : 512 × 1                                                                                                                                         
+  noisy ECG    : 512 × 1                                                                                                                                         
+  denoised ECG : 512 × 1                                                                                                                                         
+  noise level  : một số từ 0.2 đến 1.99                                                                                                                          
+  noise_type   : 1 hoặc 2                                                                                                                                        
+                                                                                                                                                                 
+  Hiện trong thư mục data của máy bạn chỉ thấy script tải dữ liệu, chưa thấy dữ liệu QTDB/NSTDB hoặc file pickle đã chuẩn bị, nên mình không thể đọc ra chính xác
+  N_test hiện tại. Theo code, N_test sẽ bằng tổng số beat cắt được từ 14 record test sau khi loại các beat quá dài.      
