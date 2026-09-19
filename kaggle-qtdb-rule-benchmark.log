@@ -1,0 +1,95 @@
+6.0s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.0s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.0s 3 0.00s - to python to disable frozen modules.
+6.0s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+6.5s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.5s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.5s 7 0.00s - to python to disable frozen modules.
+6.5s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+10.0s 9 [?25l   [90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0.0/163.9 kB[0m [31m?[0m eta [36m-:--:--[0m[2K   [91m━━━━━━━[0m[90m╺[0m[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m30.7/163.9 kB[0m [31m1.8 MB/s[0m eta [36m0:00:01[0m[2K   [91m━━━━━━━━━━━━━━━━━━━━━━[0m[90m╺[0m[90m━━━━━━━━━━━━━━━━━[0m [32m92.2/163.9 kB[0m [31m1.3 MB/s[0m eta [36m0:00:01[0m[2K   [91m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m[91m╸[0m[90m━━━━━[0m [32m143.4/163.9 kB[0m [31m1.3 MB/s[0m eta [36m0:00:01[0m[2K   [90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m163.9/163.9 kB[0m [31m1.3 MB/s[0m eta [36m0:00:00[0m
+12.2s 10 [?25hNote: you may need to restart the kernel to use updated packages.
+18.1s 11 Device: cuda | output: /kaggle/working/qtdb_rule_eval
+209.2s 12 Traceback (most recent call last):
+209.2s 13 File "<string>", line 1, in <module>
+209.2s 14 File "/usr/local/lib/python3.12/dist-packages/papermill/execute.py", line 131, in execute_notebook
+209.2s 15 raise_for_execution_errors(nb, output_path)
+209.2s 16 File "/usr/local/lib/python3.12/dist-packages/papermill/execute.py", line 251, in raise_for_execution_errors
+209.2s 17 raise error
+209.2s 18 papermill.exceptions.PapermillExecutionError:
+209.2s 19 ---------------------------------------------------------------------------
+209.2s 20 Exception encountered at "In [7]":
+209.2s 21 ---------------------------------------------------------------------------
+209.2s 22 NetFileNotFoundError                      Traceback (most recent call last)
+209.2s 23 /tmp/ipykernel_24/2526596325.py in <cell line: 0>()
+209.2s 24 28     train_beats, train_rows = [], []
+209.2s 25 29     for name in tqdm(TRAIN_RECORDS, desc='QTDB train/validation records'):
+209.2s 26 ---> 30         beats, rows = clean_segments_for_record(name)
+209.2s 27 31         if not beats:
+209.2s 28 32             raise RuntimeError(f'No valid train segments for {name}')
+209.2s 29 
+209.2s 30 /tmp/ipykernel_24/3883344883.py in clean_segments_for_record(name)
+209.2s 31 23     record = wfdb.rdrecord(name, pn_dir=PHYSIONET_QT, channels=[0])
+209.2s 32 24     pu = wfdb.rdann(name, 'pu1', pn_dir=PHYSIONET_QT)
+209.2s 33 ---> 25     atr = wfdb.rdann(name, 'atr', pn_dir=PHYSIONET_QT)
+209.2s 34 26     fs = float(record.fs)
+209.2s 35 27     ecg = record.p_signal[:, 0].astype(np.float32)
+209.2s 36 
+209.2s 37 /usr/local/lib/python3.12/dist-packages/wfdb/io/annotation.py in rdann(record_name, extension, sampfrom, sampto, shift_samps, pn_dir, return_label_elements, summarize_labels)
+209.2s 38 1959
+209.2s 39 1960     # Read the file in byte pairs
+209.2s 40 -> 1961     filebytes = load_byte_pairs(record_name, extension, pn_dir)
+209.2s 41 1962
+209.2s 42 1963     # Get WFDB annotation fields from the file bytes
+209.2s 43 
+209.2s 44 /usr/local/lib/python3.12/dist-packages/wfdb/io/annotation.py in load_byte_pairs(record_name, extension, pn_dir)
+209.2s 45 2105     # PhysioNet file
+209.2s 46 2106     else:
+209.2s 47 -> 2107         filebytes = download._stream_annotation(
+209.2s 48 2108             record_name + "." + extension, pn_dir
+209.2s 49 2109         ).reshape([-1, 2])
+209.2s 50 
+209.2s 51 /usr/local/lib/python3.12/dist-packages/wfdb/io/download.py in _stream_annotation(file_name, pn_dir)
+209.2s 52 170     # Get the content
+209.2s 53 171     with _url.openurl(url, "rb") as f:
+209.2s 54 --> 172         content = f.read()
+209.2s 55 173
+209.2s 56 174     # Convert to numpy array
+209.2s 57 
+209.2s 58 /usr/local/lib/python3.12/dist-packages/wfdb/io/_url.py in read(self, size)
+209.2s 59 578             raise ValueError("invalid size: %r" % (size,))
+209.2s 60 579
+209.2s 61 --> 580         result = b"".join(self._read_range(start, end))
+209.2s 62 581         self._pos += len(result)
+209.2s 63 582         return result
+209.2s 64 
+209.2s 65 /usr/local/lib/python3.12/dist-packages/wfdb/io/_url.py in _read_range(self, start, end)
+209.2s 66 471                 buffer_store = True
+209.2s 67 472
+209.2s 68 --> 473         with RangeTransfer(self._current_url, req_start, req_end) as xfer:
+209.2s 69 474             # Update current file URL.
+209.2s 70 475             self._current_url = xfer.response_url
+209.2s 71 
+209.2s 72 /usr/local/lib/python3.12/dist-packages/wfdb/io/_url.py in __init__(self, url, start, end)
+209.2s 73 165         self._content_iter = self._response.iter_content(4096)
+209.2s 74 166         try:
+209.2s 75 --> 167             self._parse_headers(method, self._response)
+209.2s 76 168         except Exception:
+209.2s 77 169             self.close()
+209.2s 78 
+209.2s 79 /usr/local/lib/python3.12/dist-packages/wfdb/io/_url.py in _parse_headers(self, method, response)
+209.2s 80 211             else:
+209.2s 81 212                 cls = NetFileError
+209.2s 82 --> 213             raise cls(
+209.2s 83 214                 "%s Error: %s for url: %s"
+209.2s 84 215                 % (response.status_code, response.reason, response.url),
+209.2s 85 
+209.2s 86 NetFileNotFoundError: 404 Error: Not Found for url: https://physionet.org/files/qtdb/1.0.0/sel30.atr
+209.2s 87 
+211.2s 88 /usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+211.2s 89 cells[i][c] = re.sub('\\\\\|', '|', cell)
+211.3s 90 /usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+211.3s 91 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+211.9s 92 [NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+212.2s 93 [NbConvertApp] Writing 104398 bytes to __notebook__.ipynb
+214.5s 94 [NbConvertApp] Converting notebook __notebook__.ipynb to html
+215.5s 95 [NbConvertApp] Writing 602875 bytes to __results__.html

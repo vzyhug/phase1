@@ -1,0 +1,3 @@
+noise_version,train_segments,test_segments,shape,dtype,clean_test_sha256
+nv1,91062,15535,"(15535, 512, 1)",float64,d188b8f557bcd9b6
+nv2,91062,15535,"(15535, 512, 1)",float64,d188b8f557bcd9b6

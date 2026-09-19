@@ -1,0 +1,3 @@
+model,noise_version,segments,parameters,inference_seconds,segments_per_second,sampler,steps,eta,shots,official_full_test,checkpoint
+MyDDPM,nv1,15535,11506721,861.0133738990003,18.042693030018263,DDIM,50,0.0,1,True,/kaggle/input/datasets/trucresearch/checkpoint/research_ddpm_rmn_nv1_best.pth
+MyDDPM,nv2,15535,11506721,859.3210850659998,18.078225089527322,DDIM,50,0.0,1,True,/kaggle/input/datasets/trucresearch/checkpoint/research_ddpm_rmn_nv2_best.pth

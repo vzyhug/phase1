@@ -1,0 +1,26 @@
+{
+  "rows": 403910,
+  "models": [
+    "ACDAE",
+    "CBAM-DAE",
+    "CNN-DAE",
+    "DRNN",
+    "DeepFilter",
+    "FCN-DAE",
+    "FGDAE q=1",
+    "FGDAE q=2",
+    "FGDAE q=3",
+    "FGDAE q=4",
+    "MyDDPM",
+    "TCDAE",
+    "Vanilla DAE"
+  ],
+  "noise_versions": [
+    "nv1",
+    "nv2"
+  ],
+  "duplicate_identity_rows": 0,
+  "all_metrics_finite": true,
+  "primary_prd": "paper",
+  "official_full_test_requested": true
+}
