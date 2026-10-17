@@ -1,0 +1,38 @@
+11.5s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+11.5s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+11.5s 3 0.00s - to python to disable frozen modules.
+11.5s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+12.3s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+12.3s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+12.3s 7 0.00s - to python to disable frozen modules.
+12.3s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+29.8s 9 Device: Tesla T4
+29.8s 10 Mode: train | target epochs: 400 | max this session: 10
+29.8s 11 Physical batch size: 4 | AMP: True
+29.9s 12 Imported byte-identical source embedded in this notebook
+34.6s 13 Không có CSV manifest: dựng manifest từ sample IDs trong common NPZ.
+39.6s 14 /usr/local/lib/python3.13/dist-packages/torch/functional.py:681: UserWarning: A window was not provided. A rectangular window will be applied,which is known to cause spectral leakage. Other windows such as torch.hann_window or torch.hamming_window are recommended to reduce spectral leakage.To suppress this warning and use a rectangular window, explicitly set `window=torch.ones(n_fft, device=<device>)`. (Triggered internally at /pytorch/aten/src/ATen/native/SpectralOps.cpp:835.)
+39.6s 15 return _VF.stft(  # type: ignore[attr-defined]
+39.6s 16 
+39.6s 17 /usr/local/lib/python3.13/dist-packages/torch/functional.py:681: UserWarning: A window was not provided. A rectangular window will be applied,which is known to cause spectral leakage. Other windows such as torch.hann_window or torch.hamming_window are recommended to reduce spectral leakage.To suppress this warning and use a rectangular window, explicitly set `window=torch.ones(n_fft, device=<device>)`. (Triggered internally at /pytorch/aten/src/ATen/native/SpectralOps.cpp:835.)
+39.6s 18 return _VF.stft(  # type: ignore[attr-defined]
+40.8s 19 Preflight OK: [1,1,3600] -> [1,1,3600]; params=11,506,721; 3 downsamplings: 3600 -> 1800 -> 900 -> 450; STFT(128,64) OK; strict=True OK
+48.3s 20 Khởi tạo training run mới
+48.3s 21 /tmp/ipykernel_23/3765905213.py:63: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+48.3s 22 scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+48.3s 23 
+48.3s 24 /tmp/ipykernel_23/3765905213.py:63: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+48.3s 25 scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+48.5s 26 /tmp/ipykernel_23/1678914311.py:40: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+48.5s 27 with torch.cuda.amp.autocast(enabled=USE_AMP):
+48.5s 28 
+48.5s 29 /tmp/ipykernel_23/1678914311.py:40: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+48.5s 30 with torch.cuda.amp.autocast(enabled=USE_AMP):
+118.1s 31 /tmp/ipykernel_23/1678914311.py:13: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+118.1s 32 with torch.cuda.amp.autocast(enabled=USE_AMP):
+118.1s 33 
+118.1s 34 /tmp/ipykernel_23/1678914311.py:13: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+118.1s 35 with torch.cuda.amp.autocast(enabled=USE_AMP):
+138.2s 36 Epoch 1: train=1645.280962; val=998.159625; best=998.159625 [BEST]
+228.0s 37 Epoch 2: train=900.859038; val=799.373323; best=799.373323 [BEST]
+329.1s 38 Epoch 3: train=849.456435; val=764.158018; best=764.158018 [BEST]

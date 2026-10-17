@@ -67,6 +67,9 @@ K_VALUES = (1, 3, 5, 10)
 DDIM_STEPS = 50
 DDIM_ETA = 0.0
 PREPROCESSING_VERSION = 'qtdb_pu1_p_and_beat_40ms_reflect100ms_360hz_endpoints_pad16_v2'
+MODEL_NORMALIZATION = 'per_segment_clean_maxabs_shared_with_noisy_v1'
+LOSS_VERSION = 'l1_mean_relative_stft_snr_weighted_continuous_alpha_v1'
+CHECKPOINT_TAG = 'norm_loss_v2'
 PHYSIONET_QT = 'qtdb/1.0.0'
 PHYSIONET_NST = 'nstdb/1.0.0'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -92,10 +95,63 @@ print('Device:', DEVICE, '| output:', OUT.resolve())
          source("src/models/unet_1d.py", ("from .blocks import HNFBlock, BridgeBlock, SelfAttention1D\n",))),
     md("### DDPM và DDIM đúng theo mã của nghiên cứu"),
     code("from functools import partial\nfrom inspect import isfunction\nfrom tqdm.auto import tqdm\n" +
-         source("src/models/main_model.py", ("from tqdm import tqdm\n",))),
+         source("src/models/main_model.py", ("from tqdm import tqdm\n",)) + r'''
+
+class ResearchLossDDPM(DDPM):
+    """Same DDPM/UNet architecture, with a scale-stable multi-domain objective."""
+
+    def loss_components(self, x_in, y_in, noise=None):
+        x_start = x_in
+        batch = x_start.shape[0]
+        timestep = torch.randint(0, self.num_steps, (batch,), device=x_start.device)
+        boundaries = torch.as_tensor(
+            self.sqrt_alphas_cumprod_prev, dtype=x_start.dtype, device=x_start.device
+        )
+        lower, upper = boundaries[timestep], boundaries[timestep + 1]
+        continuous = lower + torch.rand(batch, device=x_start.device) * (upper - lower)
+        continuous_2d = continuous.view(batch, 1)
+        continuous_3d = continuous.view(batch, 1, 1)
+        gaussian_noise = default(noise, lambda: torch.randn_like(x_start))
+        x_noisy = self.q_sample(x_start, continuous_3d, gaussian_noise)
+        predicted_noise = self.model(x_noisy, y_in, continuous_2d)
+
+        # Mean keeps the time loss independent of batch size and 512-sample length.
+        loss_time = F.l1_loss(predicted_noise, gaussian_noise, reduction='mean')
+
+        # Reconstruct x0 with the exact continuous alpha used to create x_t.
+        residual_scale = torch.sqrt(torch.clamp(1.0 - continuous_3d ** 2, min=0.0))
+        x0_prediction = (x_noisy - residual_scale * predicted_noise) / continuous_3d.clamp_min(1e-6)
+
+        n_fft, hop_length = 128, 64
+        window = torch.hann_window(n_fft, dtype=x_start.dtype, device=x_start.device)
+        pred_flat = x0_prediction.reshape(-1, x0_prediction.shape[-1])
+        target_flat = x_start.reshape(-1, x_start.shape[-1])
+        pred_mag = torch.abs(torch.stft(pred_flat, n_fft=n_fft, hop_length=hop_length,
+                                         window=window, return_complex=True))
+        target_mag = torch.abs(torch.stft(target_flat, n_fft=n_fft, hop_length=hop_length,
+                                           window=window, return_complex=True))
+        pred_mag = pred_mag.reshape(batch, -1)
+        target_mag = target_mag.reshape(batch, -1)
+        spectral_error = torch.mean((pred_mag - target_mag) ** 2, dim=1)
+        target_power = torch.mean(target_mag ** 2, dim=1).clamp_min(1e-6)
+        relative_frequency = spectral_error / target_power
+
+        # x0 is ill-conditioned at high-noise timesteps, so weight STFT by diffusion SNR.
+        alpha_bar = continuous ** 2
+        diffusion_snr = alpha_bar / torch.clamp(1.0 - alpha_bar, min=1e-6)
+        frequency_weight = torch.clamp(diffusion_snr, max=1.0)
+        loss_frequency = torch.mean(relative_frequency * frequency_weight)
+        total = self.lambda_time * loss_time + self.lambda_freq * loss_frequency
+        return {'total': total, 'time': loss_time, 'frequency': loss_frequency,
+                'frequency_unweighted': relative_frequency.mean(),
+                'frequency_weight': frequency_weight.mean()}
+
+    def p_losses(self, x_in, y_in, noise=None):
+        return self.loss_components(x_in, y_in, noise)['total']
+'''),
     md("## 3. Nạp hai checkpoint, kiểm tra đúng toàn bộ tensor"),
     code("""CONFIG = {
-    'train': {'feats': 80, 'batch_size': 96, 'epochs': 400, 'lr': 1e-4,
+    'train': {'feats': 80, 'batch_size': 96, 'epochs': 100, 'lr': 1e-4,
               'lambda_time': 1.0, 'lambda_freq': 0.1},
     'diffusion': {'beta_start': 1e-4, 'beta_end': 0.5,
                   'num_steps': 50, 'schedule': 'quad'},
@@ -279,7 +335,9 @@ def make_protocol_pairs(protocol):
                     'noise_channel': channel + 1,
                     'noise_start': MIDPOINT + relative_start,
                     'r': float(r), 'sampling_rate': TARGET_FS,
-                    'preprocessing_version': PREPROCESSING_VERSION, 'seed': SEED})
+                    'preprocessing_version': PREPROCESSING_VERSION,
+                    'model_normalization': MODEL_NORMALIZATION,
+                    'model_scale': float(np.max(np.abs(clean))), 'seed': SEED})
         rows.append(row)
     return noisy, pd.DataFrame(rows)
 
@@ -350,7 +408,12 @@ for protocol in (1, 2):
         torch.cuda.manual_seed_all(SEED + protocol)
     for start in tqdm(range(0, len(CLEAN), BATCH_SIZE), desc=f'Protocol {protocol}'):
         stop = min(start + BATCH_SIZE, len(CLEAN))
-        condition = torch.from_numpy(NOISY[protocol][start:stop, None, :]).to(DEVICE)
+        # Research preprocessing: normalize clean/noisy by the same clean max-abs.
+        # The output is converted back to mV before every metric is calculated.
+        model_scale = np.max(np.abs(CLEAN[start:stop]), axis=1, keepdims=True)
+        model_scale = np.maximum(model_scale, 1e-8).astype(np.float32)
+        condition_np = NOISY[protocol][start:stop] / model_scale
+        condition = torch.from_numpy(condition_np[:, None, :]).to(DEVICE)
         assert condition.shape == (stop - start, 1, LENGTH)
         running_sum = torch.zeros_like(condition)
         synchronize()
@@ -365,7 +428,14 @@ for protocol in (1, 2):
                 if shot in K_VALUES:
                     synchronize()
                     elapsed_ms = (time.perf_counter() - tick) * 1000
-                    average = (running_sum / shot).cpu().numpy()[:, 0, :]
+                    average_normalized = (running_sum / shot).cpu().numpy()[:, 0, :]
+                    average = average_normalized * model_scale
+                    amplitude_ratio = np.max(np.abs(average), axis=1) / model_scale[:, 0]
+                    if not np.isfinite(amplitude_ratio).all() or np.max(amplitude_ratio) > 50:
+                        raise RuntimeError(
+                            f'Output amplitude is unstable after inverse normalization: '
+                            f'protocol={protocol}, K={shot}, max ratio={np.nanmax(amplitude_ratio):.3g}'
+                        )
                     predictions[shot][start:stop] = average
                     RESULT_FRAMES.append(metric_rows(
                         CLEAN[start:stop], NOISY[protocol][start:stop], average,
@@ -473,6 +543,8 @@ run_info = {
     'N_clean': len(CLEAN), 'N_per_protocol': len(CLEAN),
     'sampling_rate': TARGET_FS, 'segment_length': LENGTH,
     'preprocessing_version': PREPROCESSING_VERSION,
+    'model_normalization': MODEL_NORMALIZATION,
+    'metrics_scale': 'physical QTDB mV after inverse normalization',
     'r_definition': 'peak-to-peak scaled BW / peak-to-peak clean; discrete 0.20..1.99',
     'noise_pair_seed': SEED, 'inference_seeds': {'1': SEED + 1, '2': SEED + 2},
     'K': list(K_VALUES), 'batch_size': BATCH_SIZE,
@@ -504,11 +576,11 @@ print('Saved:', sorted(path.name for path in OUT.iterdir()))
 # checkpoints have no auditable training provenance and are never used here.
 cells[0] = md("""# QTDB BW benchmark — huấn luyện và đánh giá kiến trúc của nghiên cứu
 
-Notebook Kaggle độc lập này dùng QTDB làm ECG sạch tạm thời, giữ **HNF U-Net + FiLM + attention + DDPM** và loss đa miền đúng mã `src` của nghiên cứu. Giao diện đổi sang một kênh vì benchmark QTDB có một kênh. Dữ liệu và cách chấm theo `rule.md`: 14 test record, P onset, 360 Hz, hai protocol BW, r đỉnh–đỉnh, K = 1/3/5/10, PRD_repo và PRD_standard.
+Notebook Kaggle độc lập này dùng QTDB làm ECG sạch tạm thời, giữ **HNF U-Net + FiLM + attention + DDPM** của nghiên cứu. Loss đa miền dùng L1 trung bình và STFT tương đối có trọng số SNR; `x0` dùng đúng alpha liên tục đã tạo `x_t`. Giao diện đổi sang một kênh vì benchmark QTDB có một kênh. Dữ liệu và cách chấm theo `rule.md`: 14 test record, P onset, 360 Hz, hai protocol BW, r đỉnh–đỉnh, K = 1/3/5/10, PRD_repo và PRD_standard.
 
-**Notebook huấn luyện mới từ đầu**, riêng protocol 1 và 2, đủ 400 epoch mỗi protocol, chọn checkpoint bằng validation 70/30 của các record QTDB còn lại. Hai checkpoint cũ trong repo không được nạp. Test chỉ được mở sau khi cả hai lần huấn luyện hoàn tất. Bật Internet và GPU trong Kaggle. Checkpoint `last` được lưu sau **mỗi epoch**, checkpoint `best` được cập nhật khi validation tốt hơn. Nếu có checkpoint trước đó, notebook tự resume cả model, optimizer, scheduler và EMA.
+**Notebook huấn luyện mới từ đầu**, riêng protocol 1 và 2, đủ 100 epoch mỗi protocol, chọn checkpoint bằng validation 70/30 của các record QTDB còn lại. Clean và noisy được chia cùng hệ số `max(abs(clean))` trước khi vào model; output được hoàn nguyên về mV trước khi tính metric. Checkpoint cũ chưa có normalization không được nạp. Checkpoint `last` được lưu sau **mỗi epoch**, checkpoint `best` được cập nhật khi validation tốt hơn.
 
-Kết quả test và manifest được lưu trong `/kaggle/working/qtdb_rule_eval/`. Không gọi một phiên huấn luyện chưa đủ 400 epoch là benchmark hoàn chỉnh.
+Kết quả test và manifest được lưu trong `/kaggle/working/qtdb_rule_eval/`. Không gọi một phiên huấn luyện chưa đủ 100 epoch là benchmark hoàn chỉnh.
 """)
 
 preprocessing_source = ''.join(cells[11]['source'])
@@ -554,10 +626,12 @@ train_setup = code("""from torch.utils.data import DataLoader, TensorDataset
 
 # Các tham số huấn luyện chính giữ đúng configs/base.yaml và src/training/utils.py.
 CONFIG = {
-    'train': {'feats': 80, 'batch_size': 96, 'epochs': 400, 'lr': 1e-4,
+    'train': {'feats': 80, 'batch_size': 96, 'epochs': 100, 'lr': 1e-4,
               'lambda_time': 1.0, 'lambda_freq': 0.1},
     'diffusion': {'beta_start': 1e-4, 'beta_end': 0.5,
                   'num_steps': 50, 'schedule': 'quad'},
+    'model_normalization': MODEL_NORMALIZATION,
+    'loss_version': LOSS_VERSION,
 }
 TRAIN_DIR = OUT / 'train'
 TRAIN_DIR.mkdir(parents=True, exist_ok=True)
@@ -644,15 +718,21 @@ print('Train noise: P1 first half channel 1; P2 first half channel 2')
 """)
 
 train_functions = code("""def training_loader(protocol, indices, shuffle, drop_last, epoch=0):
-    clean = torch.from_numpy(TRAIN_CLEAN[indices, None, :])
-    noisy = torch.from_numpy(TRAIN_NOISY[protocol][indices, None, :])
+    clean_raw = TRAIN_CLEAN[indices]
+    noisy_raw = TRAIN_NOISY[protocol][indices]
+    model_scale = np.maximum(np.max(np.abs(clean_raw), axis=1, keepdims=True), 1e-8).astype(np.float32)
+    clean_model = (clean_raw / model_scale).astype(np.float32)
+    noisy_model = (noisy_raw / model_scale).astype(np.float32)
+    assert np.max(np.abs(clean_model)) <= 1.00001
+    clean = torch.from_numpy(clean_model[:, None, :])
+    noisy = torch.from_numpy(noisy_model[:, None, :])
     generator = torch.Generator().manual_seed(SEED + protocol * 100_000 + epoch)
     return DataLoader(TensorDataset(clean, noisy), batch_size=CONFIG['train']['batch_size'],
                       shuffle=shuffle, drop_last=drop_last, generator=generator,
                       num_workers=0, pin_memory=DEVICE.type == 'cuda')
 
 def checkpoint_candidates(protocol):
-    name = f'last_protocol{protocol}.pth'
+    name = f'last_protocol{protocol}_{CHECKPOINT_TAG}.pth'
     candidates = [TRAIN_DIR / name]
     kaggle_input = Path('/kaggle/input')
     if kaggle_input.exists():
@@ -666,8 +746,13 @@ def restore_random_state(payload):
         torch.cuda.set_rng_state(payload['cuda_rng_state'])
 
 def save_state(model, optimizer, scheduler, ema, protocol, epoch, best_val, name):
+    ema_model_state = {key: value.detach().cpu().clone()
+                       for key, value in model.state_dict().items()}
+    for key, value in ema.state_dict().items():
+        ema_model_state[key] = value.detach().cpu().clone()
     payload = {'state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict(),
                'scheduler_state_dict': scheduler.state_dict(), 'ema_state_dict': ema.state_dict(),
+               'ema_model_state_dict': ema_model_state,
                'protocol': protocol,
                'epoch': epoch, 'best_validation_loss': best_val, 'config': CONFIG,
                'train_records': TRAIN_RECORDS, 'test_records': TEST_RECORDS,
@@ -686,34 +771,42 @@ def validation_loss(model, loader, protocol):
     if DEVICE.type == 'cuda':
         torch.cuda.manual_seed(SEED + 10_000 + protocol)
     model.eval()
-    weighted_sum, examples = 0.0, 0
+    sums = {'total': 0.0, 'time': 0.0, 'frequency': 0.0,
+            'frequency_unweighted': 0.0, 'frequency_weight': 0.0}
+    examples = 0
     with torch.no_grad():
         for clean, noisy in loader:
             clean, noisy = clean.to(DEVICE), noisy.to(DEVICE)
-            loss = model(clean, noisy)
-            weighted_sum += float(loss) * len(clean)
+            components = model.loss_components(clean, noisy)
+            for name in sums:
+                sums[name] += float(components[name]) * len(clean)
             examples += len(clean)
     torch.set_rng_state(cpu_state)
     if cuda_state is not None:
         torch.cuda.set_rng_state(cuda_state)
-    return weighted_sum / examples
+    return {name: value / examples for name, value in sums.items()}
 
 def train_protocol(protocol):
-    model = DDPM(UNet1D(2, CONFIG['train']['feats'], 128, 1), CONFIG, DEVICE).to(DEVICE)
+    model = ResearchLossDDPM(
+        UNet1D(2, CONFIG['train']['feats'], 128, 1), CONFIG, DEVICE
+    ).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=CONFIG['train']['lr'])
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=1.0)
+    # Reference schedule from rule.md. With 100 epochs it does not fire; a longer
+    # resumed experiment decays LR by 0.1 after every 150 epochs.
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=150, gamma=0.1)
     ema = EMA(0.9)
     ema.register(model)
-    val_loader = training_loader(protocol, VAL_INDICES, False, False)
+    # rule.md drops the final incomplete validation batch.
+    val_loader = training_loader(protocol, VAL_INDICES, False, True)
     if len(TRAIN_INDICES) < CONFIG['train']['batch_size']:
         raise ValueError('Training set smaller than batch size 96')
     candidates = checkpoint_candidates(protocol)
     if candidates:
         payloads = [(torch.load(path, map_location='cpu', weights_only=False), path) for path in candidates]
         payload, path = max(payloads, key=lambda item: int(item[0]['epoch']))
-        if path != TRAIN_DIR / f'last_protocol{protocol}.pth':
-            shutil.copy2(path, TRAIN_DIR / f'last_protocol{protocol}.pth')
-            for filename in (f'best_protocol{protocol}.pth', f'training_protocol{protocol}.csv'):
+        if path != TRAIN_DIR / f'last_protocol{protocol}_{CHECKPOINT_TAG}.pth':
+            shutil.copy2(path, TRAIN_DIR / f'last_protocol{protocol}_{CHECKPOINT_TAG}.pth')
+            for filename in (f'best_protocol{protocol}_{CHECKPOINT_TAG}.pth', f'training_protocol{protocol}_{CHECKPOINT_TAG}.csv'):
                 previous = path.parent / filename
                 if previous.is_file():
                     shutil.copy2(previous, TRAIN_DIR / filename)
@@ -732,41 +825,57 @@ def train_protocol(protocol):
         start_epoch, best_val = 0, float('inf')
         print(f'Protocol {protocol}: new training run')
     end_epoch = CONFIG['train']['epochs']
-    log_path = TRAIN_DIR / f'training_protocol{protocol}.csv'
+    log_path = TRAIN_DIR / f'training_protocol{protocol}_{CHECKPOINT_TAG}.csv'
     completed_epoch = start_epoch
     for epoch in range(start_epoch, end_epoch):
         train_loader = training_loader(protocol, TRAIN_INDICES, True, True, epoch=epoch)
         model.train()
-        total, count = 0.0, 0
+        train_sums = {'total': 0.0, 'time': 0.0, 'frequency': 0.0}
+        examples = 0
         for clean, noisy in tqdm(train_loader, desc=f'P{protocol} epoch {epoch + 1}', leave=False):
             clean, noisy = clean.to(DEVICE), noisy.to(DEVICE)
             optimizer.zero_grad(set_to_none=True)
-            loss = model(clean, noisy)  # src.models.main_model.DDPM.p_losses, unchanged.
+            components = model.loss_components(clean, noisy)
+            loss = components['total']
             if not torch.isfinite(loss):
                 raise FloatingPointError(f'Nonfinite training loss, protocol {protocol}, epoch {epoch}')
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             ema.update(model)
-            total += float(loss.detach())
-            count += 1
+            for name in train_sums:
+                train_sums[name] += float(components[name].detach()) * len(clean)
+            examples += len(clean)
         scheduler.step()
-        val = validation_loss(model, val_loader, protocol)
-        if not np.isfinite(val):
+        train_metrics = {name: value / examples for name, value in train_sums.items()}
+        val_metrics = validation_loss(model, val_loader, protocol)
+        val = val_metrics['total']
+        if not all(np.isfinite(value) for value in val_metrics.values()):
             raise FloatingPointError(f'Nonfinite validation loss, protocol {protocol}, epoch {epoch}')
         if val < best_val:
             best_val = val
             save_state(model, optimizer, scheduler, ema, protocol, epoch, best_val,
-                       f'best_protocol{protocol}.pth')
+                       f'best_protocol{protocol}_{CHECKPOINT_TAG}.pth')
         save_state(model, optimizer, scheduler, ema, protocol, epoch, best_val,
-                   f'last_protocol{protocol}.pth')
+                   f'last_protocol{protocol}_{CHECKPOINT_TAG}.pth')
         pd.DataFrame([{'protocol': protocol, 'epoch': epoch + 1,
-                       'train_loss': total / count, 'validation_loss': val,
+                       'learning_rate': optimizer.param_groups[0]['lr'],
+                       'train_loss': train_metrics['total'],
+                       'train_time_loss': train_metrics['time'],
+                       'train_frequency_loss': train_metrics['frequency'],
+                       'validation_loss': val,
+                       'validation_time_loss': val_metrics['time'],
+                       'validation_frequency_loss': val_metrics['frequency'],
+                       'validation_frequency_unweighted': val_metrics['frequency_unweighted'],
+                       'validation_frequency_weight': val_metrics['frequency_weight'],
                        'best_validation_loss': best_val}]).to_csv(
                            log_path, mode='a', header=not log_path.exists(), index=False)
         completed_epoch = epoch + 1
         print(f'P{protocol} epoch {epoch + 1}/{CONFIG["train"]["epochs"]}: '
-              f'train={total/count:.6f}, val={val:.6f}, best={best_val:.6f}')
+              f'train={train_metrics["total"]:.6f} '
+              f'(time={train_metrics["time"]:.6f}, freq={train_metrics["frequency"]:.6f}), '
+              f'val={val:.6f} (time={val_metrics["time"]:.6f}, '
+              f'freq={val_metrics["frequency"]:.6f}), best={best_val:.6f}')
     return completed_epoch
 """)
 
@@ -779,7 +888,7 @@ for protocol in (1, 2):
 READY_FOR_TEST = (TRAIN_RECORD_LIMIT is None and
                   all(COMPLETED_EPOCHS[p] >= CONFIG['train']['epochs'] for p in (1, 2)))
 if READY_FOR_TEST:
-    print('Both protocols reached 400 epochs; validation-selected checkpoints are locked.')
+    print('Both protocols reached 100 epochs; validation-selected checkpoints are locked.')
 else:
     print('Training is incomplete; test remains unopened.')
 """)
@@ -793,7 +902,7 @@ load_best = code("""def sha256(path):
 
 MODELS, CHECKPOINT_INFO = {}, []
 for protocol in (1, 2):
-    path = TRAIN_DIR / f'best_protocol{protocol}.pth'
+    path = TRAIN_DIR / f'best_protocol{protocol}_{CHECKPOINT_TAG}.pth'
     if not path.is_file():
         matches = list(Path('/kaggle/input').rglob(path.name)) if Path('/kaggle/input').exists() else []
         if len(matches) != 1:
@@ -802,8 +911,8 @@ for protocol in (1, 2):
     payload = torch.load(path, map_location='cpu', weights_only=False)
     assert payload['protocol'] == protocol and payload['config'] == CONFIG
     assert tuple(payload['train_records']) == TRAIN_RECORDS
-    model = DDPM(UNet1D(2, 80, 128, 1), CONFIG, DEVICE).to(DEVICE)
-    model.load_state_dict(payload['state_dict'], strict=True)
+    model = ResearchLossDDPM(UNet1D(2, 80, 128, 1), CONFIG, DEVICE).to(DEVICE)
+    model.load_state_dict(payload.get('ema_model_state_dict', payload['state_dict']), strict=True)
     model.eval()
     MODELS[protocol] = model
     info = {'protocol': protocol, 'path': str(path), 'sha256': sha256(path),
@@ -822,7 +931,7 @@ cells = [
     md('## 4. Tải BW và khóa nửa thời gian cho hai protocol'), code(noise_loading_source),
     md('## 5. QTDB train/validation và cặp BW nửa đầu'), train_setup, train_pairing,
     md('## 6. Huấn luyện riêng hai protocol, chọn best bằng validation'), train_functions, train_run,
-    md('## 7. Nạp checkpoint best sau khi đủ 400 epoch'), load_best,
+    md('## 7. Nạp checkpoint best sau khi đủ 100 epoch'), load_best,
     md('## 8. Mở 14 QTDB test records'), code(test_loading_source),
     md('## 9. Tạo cặp BW test từ nửa sau và manifest'), code(test_pairing_source),
     cells[14], cells[15], cells[16], cells[17], cells[18], cells[19], cells[20],

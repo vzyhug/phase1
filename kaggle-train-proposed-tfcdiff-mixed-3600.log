@@ -1,0 +1,106 @@
+6.0s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.0s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.0s 3 0.00s - to python to disable frozen modules.
+6.0s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+6.5s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+6.5s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+6.5s 7 0.00s - to python to disable frozen modules.
+6.5s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+13.4s 9 Device: Tesla T4
+13.4s 10 Mode: train | target epochs: 400 | max this session: 100
+13.4s 11 Micro/effective batch: 4 / 96 | accumulation: 24 | AMP: True
+13.4s 12 Imported byte-identical source embedded in this notebook
+13.6s 13 WARNING: NPZ không có protocol metadata; đang chạy compatibility mode.
+13.6s 14 WARNING: chỉ tiếp tục nếu file này thực sự là mixed BW+EM+MA n_type=1 theo compare.md.
+13.6s 15 Available keys: ['clean_train', 'noisy_train', 'clean_val', 'noisy_val', 'clean_test', 'noisy_test', 'record_id_train', 'record_id_val', 'record_id_test', 'sample_id_test', 'q_train', 'q_val', 'q_test', 'train_idx', 'val_idx', 'noise_version', 'sampling_rate']
+32.5s 16 Protocol: tfcdiff_mixed_bwem_ma | verified: False | n_type=1 | split: pre_split_input
+35.4s 17 Preflight OK: [1,1,3600] -> [1,1,3600]; params=11,506,721; 3 downsamplings: 3600 -> 1800 -> 900 -> 450; research STFT(128,64) OK; strict=True OK
+40.4s 18 Khởi tạo training run mới
+40.4s 19 /tmp/ipykernel_23/2309709021.py:63: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+40.4s 20 scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+40.4s 21 
+40.4s 22 /tmp/ipykernel_23/2309709021.py:63: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+40.4s 23 scaler = torch.cuda.amp.GradScaler(enabled=USE_AMP)
+40.6s 24 /tmp/ipykernel_23/1489237052.py:57: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+40.6s 25 with torch.cuda.amp.autocast(enabled=USE_AMP):
+40.6s 26 
+40.6s 27 /tmp/ipykernel_23/1489237052.py:57: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+40.6s 28 with torch.cuda.amp.autocast(enabled=USE_AMP):
+290.8s 29 /tmp/ipykernel_23/1489237052.py:16: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+290.8s 30 with torch.cuda.amp.autocast(enabled=USE_AMP):
+290.8s 31 
+290.8s 32 /tmp/ipykernel_23/1489237052.py:16: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+290.8s 33 with torch.cuda.amp.autocast(enabled=USE_AMP):
+340.4s 34 Epoch 1: train=0.161562; val=0.080824; best=0.080824 [BEST]
+634.5s 35 Epoch 2: train=0.072928; val=0.067120; best=0.067120 [BEST]
+948.5s 36 Epoch 3: train=0.063671; val=0.062110; best=0.062110 [BEST]
+1262.4s 37 Epoch 4: train=0.058524; val=0.056695; best=0.056695 [BEST]
+1586.2s 38 Epoch 5: train=0.055216; val=0.054575; best=0.054575 [BEST]
+1890.6s 39 Epoch 6: train=0.053405; val=0.052797; best=0.052797 [BEST]
+2205.4s 40 Epoch 7: train=0.051538; val=0.050309; best=0.050309 [BEST]
+2519.7s 41 Epoch 8: train=0.051069; val=0.050907; best=0.050309
+2845.1s 42 Epoch 9: train=0.050178; val=0.049484; best=0.049484 [BEST]
+3149.7s 43 Epoch 10: train=0.048241; val=0.048459; best=0.048459 [BEST]
+3463.8s 44 Epoch 11: train=0.048844; val=0.049515; best=0.048459
+3778.3s 45 Epoch 12: train=0.047303; val=0.047740; best=0.047740 [BEST]
+4102.1s 46 Epoch 13: train=0.046771; val=0.046803; best=0.046803 [BEST]
+4406.2s 47 Epoch 14: train=0.046570; val=0.045922; best=0.045922 [BEST]
+4724.8s 48 Epoch 15: train=0.045489; val=0.046142; best=0.045922
+5044.2s 49 Epoch 16: train=0.044911; val=0.045407; best=0.045407 [BEST]
+5371.9s 50 Epoch 17: train=0.045019; val=0.044844; best=0.044844 [BEST]
+5679.1s 51 Epoch 18: train=0.044773; val=0.044952; best=0.044844
+5993.4s 52 Epoch 19: train=0.044523; val=0.050124; best=0.044844
+6307.4s 53 Epoch 20: train=0.043521; val=0.046098; best=0.044844
+6632.0s 54 Epoch 21: train=0.043880; val=0.043837; best=0.043837 [BEST]
+6936.3s 55 Epoch 22: train=0.043521; val=0.044079; best=0.043837
+7250.7s 56 Epoch 23: train=0.043102; val=0.043426; best=0.043426 [BEST]
+7565.1s 57 Epoch 24: train=0.043471; val=0.042407; best=0.042407 [BEST]
+7889.0s 58 Epoch 25: train=0.042219; val=0.042805; best=0.042407
+8193.2s 59 Epoch 26: train=0.042816; val=0.041876; best=0.041876 [BEST]
+8507.3s 60 Epoch 27: train=0.042393; val=0.042922; best=0.041876
+8821.6s 61 Epoch 28: train=0.042033; val=0.041724; best=0.041724 [BEST]
+9146.0s 62 Epoch 29: train=0.041680; val=0.041650; best=0.041650 [BEST]
+9450.5s 63 Epoch 30: train=0.042614; val=0.042120; best=0.041650
+9764.7s 64 Epoch 31: train=0.040685; val=0.042600; best=0.041650
+10079.0s 65 Epoch 32: train=0.041975; val=0.041051; best=0.041051 [BEST]
+10403.5s 66 Epoch 33: train=0.040552; val=0.041029; best=0.041029 [BEST]
+10707.2s 67 Epoch 34: train=0.041288; val=0.041656; best=0.041029
+11021.6s 68 Epoch 35: train=0.040256; val=0.040329; best=0.040329 [BEST]
+11335.8s 69 Epoch 36: train=0.041145; val=0.040281; best=0.040281 [BEST]
+11660.1s 70 Epoch 37: train=0.040046; val=0.040154; best=0.040154 [BEST]
+11964.0s 71 Epoch 38: train=0.039690; val=0.041483; best=0.040154
+12278.5s 72 Epoch 39: train=0.040224; val=0.039927; best=0.039927 [BEST]
+12592.6s 73 Epoch 40: train=0.040311; val=0.040865; best=0.039927
+12624.1s 74 Traceback (most recent call last):
+12624.1s 75 File "<string>", line 1, in <module>
+12624.1s 76 import sys;import papermill as pm;pm.execute_notebook("__notebook__.ipynb","__notebook__.ipynb",progress_bar=False,log_output=True,stdout_file=sys.stdout,stderr_file=sys.stderr,allow_errors=False,timeout=43200)
+12624.1s 77 ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12624.1s 78 File "/usr/local/lib/python3.13/dist-packages/papermill/execute.py", line 131, in execute_notebook
+12624.1s 79 raise_for_execution_errors(nb, output_path)
+12624.1s 80 ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+12624.1s 81 File "/usr/local/lib/python3.13/dist-packages/papermill/execute.py", line 251, in raise_for_execution_errors
+12624.1s 82 raise error
+12624.1s 83 papermill.exceptions.PapermillExecutionError:
+12624.1s 84 ---------------------------------------------------------------------------
+12624.1s 85 Exception encountered at "In [7]":
+12624.1s 86 ---------------------------------------------------------------------------
+12624.1s 87 FloatingPointError                        Traceback (most recent call last)
+12624.1s 88 /tmp/ipykernel_23/1489237052.py in <cell line: 0>()
+12624.1s 89 65                 gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+12624.1s 90 66                 if not torch.isfinite(gradient_norm):
+12624.1s 91 ---> 67                     raise FloatingPointError(f'Gradient NaN/Inf tại epoch {epoch + 1}')
+12624.1s 92 68                 gradient_norms.append(float(gradient_norm))
+12624.1s 93 69                 old_scale = scaler.get_scale()
+12624.1s 94 
+12624.1s 95 FloatingPointError: Gradient NaN/Inf tại epoch 41
+12624.1s 96 
+12626.1s 97 /usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+12626.1s 98 cells[i][c] = re.sub('\\\\\|', '|', cell)
+12626.3s 99 /usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+12626.3s 100 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+12626.9s 101 [NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+12627.1s 102 [NbConvertApp] Writing 1082810 bytes to __notebook__.ipynb
+12629.5s 103 [NbConvertApp] Converting notebook __notebook__.ipynb to html
+12630.3s 104 [NbConvertApp] Support files will be in __results___files/
+12630.3s 105 [NbConvertApp] Making directory __results___files
+12630.3s 106 [NbConvertApp] Writing 1289885 bytes to __results__.html

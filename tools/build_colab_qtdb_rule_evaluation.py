@@ -19,10 +19,11 @@ imports=imports.replace("OUT = Path('/kaggle/working/qtdb_rule_eval') if Path('/
 checkpoint_cell=r'''# Sửa đúng thư mục chứa hai checkpoint best trên Google Drive.
 CHECKPOINT_DIR = Path('/content/drive/MyDrive/qtdb_rule_eval/train')
 CHECKPOINT_PATHS = {
-    1: CHECKPOINT_DIR / 'best_protocol1.pth',
-    2: CHECKPOINT_DIR / 'best_protocol2.pth',
+    1: CHECKPOINT_DIR / 'best_protocol1_norm_loss_v2.pth',
+    2: CHECKPOINT_DIR / 'best_protocol2_norm_loss_v2.pth',
 }
 DECLARED_TRAIN_EPOCHS = 100
+EXPECTED_LOSS_VERSION = 'l1_mean_relative_stft_snr_weighted_continuous_alpha_v1'
 OUT.mkdir(parents=True, exist_ok=True)
 
 CONFIG = {
@@ -30,6 +31,8 @@ CONFIG = {
               'lr': 1e-4, 'lambda_time': 1.0, 'lambda_freq': 0.1},
     'diffusion': {'beta_start': 1e-4, 'beta_end': 0.5,
                   'num_steps': 50, 'schedule': 'quad'},
+    'model_normalization': MODEL_NORMALIZATION,
+    'loss_version': EXPECTED_LOSS_VERSION,
 }
 
 def sha256(path):
@@ -51,8 +54,16 @@ for protocol, path in CHECKPOINT_PATHS.items():
     saved_diffusion = payload.get('config', {}).get('diffusion', {})
     if saved_diffusion and saved_diffusion != CONFIG['diffusion']:
         raise RuntimeError(f'{path.name}: cấu hình diffusion không khớp: {saved_diffusion}')
+    saved_normalization = payload.get('config', {}).get('model_normalization')
+    if saved_normalization != MODEL_NORMALIZATION:
+        raise RuntimeError(f'{path.name}: checkpoint không dùng normalization v1; cần train lại')
+    saved_loss_version = payload.get('config', {}).get('loss_version')
+    if saved_loss_version != EXPECTED_LOSS_VERSION:
+        raise RuntimeError(f'{path.name}: loss_version không khớp: {saved_loss_version}')
     model = DDPM(UNet1D(2, 80, 128, 1), CONFIG, DEVICE).to(DEVICE)
-    model.load_state_dict(payload['state_dict'], strict=True)
+    if 'ema_model_state_dict' not in payload:
+        raise RuntimeError(f'{path.name}: checkpoint chưa chứa EMA model state của loss v2')
+    model.load_state_dict(payload['ema_model_state_dict'], strict=True)
     model.eval()
     probe = torch.zeros(1, 1, LENGTH, device=DEVICE)
     with torch.inference_mode():
@@ -86,7 +97,7 @@ plot=plot.replace("'full_benchmark': TRAIN_RECORD_LIMIT is None and MAX_TEST_REC
 plot=plot.replace("'training_history_verified_from_checkpoint': True,\n    'train_records': list(TRAIN_RECORDS),\n    'train_N': len(TRAIN_INDICES), 'validation_N': len(VAL_INDICES),", "'declared_training_completed_epochs': DECLARED_TRAIN_EPOCHS,\n    'checkpoint_selection': 'minimum validation loss during the completed 100-epoch training run',")
 
 cells=[
-md('''# Đánh giá QTDB/BW trên Colab — checkpoint 100 epoch\n\nNotebook này **chỉ đánh giá**, không huấn luyện lại. Nó nạp hai checkpoint validation-best của protocol 1/2, tạo lại 14 QTDB test records và hai nửa BW test theo `rule.md`, chạy DDIM K = 1/3/5/10, rồi xuất metric per-sample và bảng tổng hợp vào Google Drive.\n\nTrước khi chạy, đặt `best_protocol1.pth` và `best_protocol2.pth` trong thư mục cấu hình ở cell checkpoint. Bật GPU và Internet trong Colab.'''),
+md('''# Đánh giá QTDB/BW trên Colab — checkpoint normalization v1 + loss v2, 100 epoch\n\nNotebook này **chỉ đánh giá**, không huấn luyện lại. Model nhận clean/noisy đã chia cùng hệ số `max(abs(clean))`; output được nhân lại hệ số trước khi tính metric trên thang mV.\n\nTrước khi chạy, đặt `best_protocol1_norm_loss_v2.pth` và `best_protocol2_norm_loss_v2.pth` trong thư mục cấu hình ở cell checkpoint. Bật GPU và Internet trong Colab.'''),
 md('## 1. Cài thư viện'), code(body(2).replace('%pip','!pip')),
 md('## 2. Mount Google Drive'), code("from google.colab import drive\ndrive.mount('/content/drive')\n"),
 md('## 3. Cấu hình đánh giá'), code(imports),

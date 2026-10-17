@@ -14,10 +14,11 @@ imports = body(6).replace("OUT = Path('/content/drive/MyDrive/qtdb_rule_evaluati
 
 checkpoint = r'''# Gắn Kaggle Dataset/Notebook Output chứa đúng hai checkpoint bằng Add Input.
 CHECKPOINT_FILENAMES = {
-    1: 'best_protocol1.pth',
-    2: 'best_protocol2.pth',
+    1: 'best_protocol1_norm_loss_v2.pth',
+    2: 'best_protocol2_norm_loss_v2.pth',
 }
 DECLARED_TRAIN_EPOCHS = 100
+EXPECTED_LOSS_VERSION = 'l1_mean_relative_stft_snr_weighted_continuous_alpha_v1'
 OUT.mkdir(parents=True, exist_ok=True)
 
 CONFIG = {
@@ -25,6 +26,7 @@ CONFIG = {
               'lr': 1e-4, 'lambda_time': 1.0, 'lambda_freq': 0.1},
     'diffusion': {'beta_start': 1e-4, 'beta_end': 0.5,
                   'num_steps': 50, 'schedule': 'quad'},
+    'model_normalization': MODEL_NORMALIZATION,
 }
 
 def locate_unique_checkpoint(filename):
@@ -54,8 +56,16 @@ for protocol, filename in CHECKPOINT_FILENAMES.items():
     saved_diffusion = payload.get('config', {}).get('diffusion', {})
     if saved_diffusion and saved_diffusion != CONFIG['diffusion']:
         raise RuntimeError(f'{filename}: cấu hình diffusion không khớp: {saved_diffusion}')
+    saved_normalization = payload.get('config', {}).get('model_normalization')
+    if saved_normalization != MODEL_NORMALIZATION:
+        raise RuntimeError(f'{filename}: checkpoint không dùng normalization v1; cần train lại')
+    saved_loss_version = payload.get('config', {}).get('loss_version')
+    if saved_loss_version != EXPECTED_LOSS_VERSION:
+        raise RuntimeError(f'{filename}: loss_version không khớp: {saved_loss_version}')
     model = DDPM(UNet1D(2, 80, 128, 1), CONFIG, DEVICE).to(DEVICE)
-    model.load_state_dict(payload['state_dict'], strict=True)
+    if 'ema_model_state_dict' not in payload:
+        raise RuntimeError(f'{filename}: checkpoint chưa chứa EMA model state của loss v2')
+    model.load_state_dict(payload['ema_model_state_dict'], strict=True)
     model.eval()
     probe = torch.zeros(1, 1, LENGTH, device=DEVICE)
     with torch.inference_mode():
@@ -77,7 +87,7 @@ display(pd.DataFrame(CHECKPOINT_INFO))
 '''
 
 cells = [
-md('''# Kaggle Save & Run All — đánh giá QTDB/BW từ checkpoint 100 epoch\n\nNotebook này **chỉ đánh giá**, không train lại. Trước khi chạy, dùng **Add Input** để gắn Dataset hoặc Notebook Output chứa đúng `best_protocol1.pth` và `best_protocol2.pth`. Bật **GPU** và **Internet**, sau đó chọn **Save Version → Save & Run All**.\n\nNotebook tự tìm checkpoint trong `/kaggle/input`, tạo lại 14 QTDB test records cùng hai protocol NSTDB BW theo `rule.md`, chạy DDIM K = 1/3/5/10 và lưu kết quả vào `/kaggle/working/qtdb_rule_evaluation_100epoch/`.'''),
+md('''# Kaggle Save & Run All — đánh giá QTDB/BW normalization v1 + loss v2, 100 epoch\n\nNotebook này **chỉ đánh giá**, không train lại. Dùng **Add Input** để gắn đúng `best_protocol1_norm_loss_v2.pth` và `best_protocol2_norm_loss_v2.pth`. Model nhận tín hiệu đã chuẩn hóa theo clean max-abs và output được hoàn nguyên về mV trước khi tính metric. Bật **GPU** và **Internet**, sau đó chọn **Save Version → Save & Run All**.\n\nKết quả được lưu vào `/kaggle/working/qtdb_rule_evaluation_100epoch/`.'''),
 md('## 1. Cài thư viện'), code(body(2)),
 md('## 2. Cấu hình Save & Run All'), code(imports),
 md('## 3. Kiến trúc HNF U-Net + FiLM + attention'), code(body(8)),

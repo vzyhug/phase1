@@ -1,15 +1,15 @@
-# Hệ thống nghiên cứu khử nhiễu ECG 12 đạo trình trên LUDB
+# Hệ thống nghiên cứu khử nhiễu ECG một đạo trình trên QTDB
 
 ## 1. Tổng quan
 
-Nghiên cứu xây dựng hệ thống **Conditional Denoising Diffusion Probabilistic Model (Conditional DDPM)** để khử nhiễu ECG 12 đạo trình từ cơ sở dữ liệu **LUDB**. Mục tiêu là phục hồi tín hiệu sạch \(x_0\) từ tín hiệu quan sát bị nhiễu \(y\), đồng thời bảo toàn hình thái sóng ECG trên cả miền thời gian và miền tần số.
+Nghiên cứu xây dựng hệ thống **Conditional Denoising Diffusion Probabilistic Model (Conditional DDPM)** để khử nhiễu ECG một đạo trình từ **QT Database (QTDB)**. QTDB là nguồn ECG duy nhất trong phạm vi train, validation, test và báo cáo kết quả. Mục tiêu là phục hồi tín hiệu sạch \(x_0\) từ tín hiệu quan sát bị nhiễu \(y\), đồng thời bảo toàn hình thái ECG trên cả miền thời gian và miền tần số.
 
 Thay vì hồi quy trực tiếp \(y\rightarrow x_0\), mô hình nhận trạng thái đã khuếch tán \(x_t\), ECG nhiễu điều kiện \(y\) và mức diffusion \(\sqrt{\bar\alpha_t}\), sau đó dự đoán nhiễu Gaussian đã được thêm vào tín hiệu sạch. Quá trình đảo diffusion dùng dự đoán này để tái tạo ECG.
 
 Các thành phần chính của nghiên cứu:
 
-- dữ liệu ECG 12 đạo trình từ LUDB;
-- tổng hợp ba loại artifact từ MIT-BIH Noise Stress Test Database;
+- common data ECG một đạo trình từ QTDB;
+- benchmark chính QTDB–BW dài 3600 điểm ở 360 Hz;
 - 1D U-Net với HNF đa tỉ lệ, FiLM và self-attention;
 - loss kết hợp miền thời gian và miền tần số;
 - suy luận bằng DDPM hoặc DDIM;
@@ -42,44 +42,38 @@ rồi dùng \(\hat\epsilon\) để ước lượng \(\hat x_0\) và thực hiệ
 
 ## 3. Dữ liệu và tiền xử lý
 
-### 3.1. ECG sạch từ LUDB
+### 3.1. Common data từ QTDB
 
-- Đọc các record LUDB bằng thư viện `wfdb`.
-- Giữ toàn bộ **12 đạo trình**.
-- Resample tín hiệu về **500 Hz** nếu tần số gốc khác 500 Hz.
-- Cắt mỗi record thành các cửa sổ dài **512 mẫu**, tương đương khoảng 1,024 giây.
-- Dùng stride 32 cho record train và stride 128 cho record test.
-- Chuẩn hóa từng đạo trình trong mỗi cửa sổ bằng biên độ tuyệt đối cực đại:
+Benchmark chính dùng một common dataset đã được khóa và dùng chung cho cả năm mô hình. Notebook của từng mô hình không tự tải lại QTDB, không tự chia tập và không tự sinh nhiễu. Contract chính:
+
+```text
+clean_train/noisy_train: [N_train, 1, 3600]
+clean_val/noisy_val:     [N_val,   1, 3600]
+clean_test/noisy_test:   [N_test,  1, 3600]
+sample_id_test:          [N_test]
+```
+
+Tín hiệu có một đạo trình, tần số 360 Hz và chiều dài 3600 điểm. Train chỉ dùng train split; validation dùng để chọn checkpoint; test không được dùng để chọn epoch hoặc siêu tham số.
+
+Mỗi mẫu được chuẩn hóa bằng scale chỉ tính từ noisy input và dùng chung cho clean target:
 
 \[
-x_{norm}=\frac{x}{\max |x|}.
+s_i=\max|y_i|,\qquad y_i'=y_i/s_i,\qquad x_i'=x_i/s_i.
 \]
+
+Prediction được nhân lại với \(s_i\) trước khi benchmark.
 
 ### 3.2. Nguồn nhiễu
 
-Artifact được lấy từ **MIT-BIH Noise Stress Test Database**, gồm:
+Các nguồn artifact nghiên cứu gồm:
 
 - `bw`: baseline wander;
 - `em`: electrode motion;
 - `ma`: muscle artifact.
 
-Các tín hiệu nhiễu được resample về 500 Hz để đồng bộ với LUDB. Với mỗi cửa sổ ECG sạch, hệ thống:
+Benchmark chính 3600 sử dụng **baseline wander (BW)** đã được tạo sẵn trong common data. Bốn mô hình đối chứng và Conditional DDPM phải nhận đúng cùng các cặp clean–noisy và cùng `sample_id`; không mô hình nào được tự tạo một phiên bản BW khác.
 
-1. chọn ngẫu nhiên một loại artifact;
-2. lấy một noise patch liên tiếp dài 512 mẫu;
-3. cân bằng công suất noise theo công suất của ECG sạch;
-4. nhân thêm hệ số \(\delta\sim U(0.2,2.0)\);
-5. cộng noise vào ECG sạch;
-6. tạo ba phiên bản nhiễu cho mỗi cửa sổ để tăng dữ liệu.
-
-Công thức scale hiện tại:
-
-\[
-s=\sqrt{\frac{P_{clean}}{P_{noise}}},
-\qquad y=x_0+\delta s n.
-\]
-
-Một noise patch được broadcast cho cả 12 đạo trình. Pipeline lưu `clean.npy`, `noisy.npy` và `deltas.npy` trong `data/synthesis/`.
+BW, EM và MA cũng được dùng trong nhánh thí nghiệm QTDB 512 điểm để nghiên cứu model chuyên biệt, zero-shot RMN và generalization chéo nhiễu. Nhánh 512 là thí nghiệm phụ và không được trộn số liệu trực tiếp với benchmark 3600.
 
 ## 4. Kiến trúc mô hình
 
@@ -87,10 +81,10 @@ Một noise patch được broadcast cho cả 12 đạo trình. Pipeline lưu `c
 
 Đầu vào mạng là phép nối theo chiều channel giữa:
 
-- \(x_t\): trạng thái diffusion, 12 kênh;
-- \(y\): ECG quan sát bị nhiễu, 12 kênh.
+- \(x_t\): trạng thái diffusion, 1 kênh;
+- \(y\): ECG quan sát bị nhiễu, 1 kênh.
 
-Do đó đầu vào có 24 kênh và đầu ra có 12 kênh dự đoán nhiễu. Với cấu hình mặc định `base_channels=80`, encoder sử dụng số đặc trưng `80 → 160 → 320 → 640`. Mạng có ba lần downsampling, ba lần upsampling và các skip connection giữa encoder–decoder.
+Do đó mô hình dùng `in_channels=2`, `out_channels=1`. Với `base_channels=80`, encoder sử dụng số đặc trưng `80 → 160 → 320 → 640`. Ba lần downsampling biến chiều dài `3600 → 1800 → 900 → 450`; ba lần upsampling cùng skip connection trả output về đúng 3600 điểm.
 
 ### 4.2. HNFBlock
 
@@ -114,7 +108,7 @@ BridgeBlock được đặt ở từng mức encoder, giúp mạng biết mức 
 
 ### 4.4. Self-attention
 
-Tại bottleneck, mô hình dùng self-attention 1D với bốn head. Cơ chế này cho phép mỗi vị trí thời gian kết hợp thông tin từ toàn bộ cửa sổ, hỗ trợ học quan hệ dài hạn giữa các thành phần P–QRS–T.
+Tại bottleneck, mô hình dùng self-attention 1D với bốn head. Cơ chế này cho phép mỗi vị trí thời gian kết hợp thông tin từ cửa sổ ECG 10 giây, hỗ trợ học quan hệ dài hạn giữa các thành phần P–QRS–T.
 
 ### 4.5. Mô hình thay thế
 
@@ -127,7 +121,7 @@ Cấu hình trong `configs/base.yaml`:
 | Thành phần | Giá trị |
 |---|---:|
 | Epoch | 400 |
-| Batch size | 96 |
+| Physical batch size mặc định | 4 |
 | Learning rate | `1e-4` |
 | Feature cơ sở | 80 |
 | Diffusion steps | 50 |
@@ -156,9 +150,11 @@ Loss thời gian buộc mạng dự đoán đúng noise, còn loss tần số h�
 - Optimizer: Adam.
 - Gradient clipping: norm tối đa 1.0.
 - EMA: cập nhật shadow weights với \(\mu=0.9\).
-- Validation mặc định chạy mỗi epoch và dùng DDIM 15 bước để tính RMSE, SNR, PRD và cosine similarity.
-- Checkpoint có validation loss thấp nhất được lưu thành `checkpoints/model.pth`; epoch cuối được lưu thành `final.pth`.
-- Log huấn luyện dự kiến được lưu tại `checkpoints/training_log.csv`.
+- Validation chạy mỗi epoch và chỉ validation loss được dùng để chọn checkpoint; test metric không tham gia chọn model.
+- `last_proposed_conditional_ddpm_3600.pth` dùng để resume; `best_proposed_conditional_ddpm_3600.pth` lưu epoch có validation loss thấp nhất.
+- EMA weights, optimizer, scheduler, AMP scaler, RNG state, source hash và common-data fingerprint đều được lưu trong checkpoint.
+- Log được lưu tại `training_proposed_conditional_ddpm_3600.csv`.
+- Loss L1 của mã nguồn dùng `reduction='sum'`, nên raw loss tỷ lệ với batch size và chiều dài 3600; không được so trị tuyệt đối với loss của thí nghiệm 512 điểm.
 
 ## 6. Suy luận
 
@@ -169,7 +165,15 @@ Hệ thống hỗ trợ hai phương pháp:
 
 Luồng inference mặc định dùng DDIM 50 bước, `eta=0`. Quá trình bắt đầu từ Gaussian noise có cùng kích thước với ECG đầu vào, sau đó lặp dự đoán \(\epsilon\) và cập nhật \(x_t\) cho đến khi thu được \(\hat x_0\).
 
-Hệ thống cũng hỗ trợ **multi-shot**: chạy nhiều lần từ các Gaussian khởi tạo khác nhau rồi lấy trung bình. Cách này có thể giảm phương sai đầu ra nhưng làm chi phí suy luận tăng gần tuyến tính theo số shot.
+Kết quả chính của benchmark dùng **DDIM 1-shot**, 50 bước, `eta=0`, seed 2024 và EMA weights. Multi-shot chỉ được xem là thí nghiệm khác và không được ghi đè output 1-shot.
+
+Notebook `kaggle_proposed_conditional_ddpm_3600.ipynb` xuất file đóng góp của mô hình:
+
+```text
+proposed_seed2024.npz
+```
+
+gồm `sample_id`, `prediction`, `latency_ms` và `normalization_scale`. Prediction có shape `[N_test,1,3600]` và đã được inverse-normalize.
 
 ## 7. Đánh giá
 
@@ -185,57 +189,53 @@ Các metric đã cài đặt:
 | SNR-out | Chất lượng tín hiệu phục hồi | Cao |
 | SNR improvement | `SNR-out − SNR-in` | Dương và cao |
 
-`evaluate_and_plot.py` còn triển khai Butterworth, median filter và wavelet để so sánh với mô hình diffusion, đồng thời vẽ cả 12 đạo trình. Tuy nhiên, script hiện chỉ đánh giá mẫu đầu tiên và có fallback sang sóng sin nhân tạo khi thiếu dữ liệu; vì vậy chưa thể xem đây là benchmark LUDB chính thức.
+Notebook huấn luyện/export không tính metric. Benchmark chung nhận năm file prediction, căn theo `sample_id`, rồi tính lại metric trên đúng cùng `clean_test/noisy_test`. Checkpoint `.pth` không phải đầu vào trực tiếp của bảng benchmark.
 
-Repo hiện **chưa có bảng kết quả đánh giá LUDB đầy đủ**. Các CSV trong `src/results/` không thuộc thí nghiệm LUDB chính nên không được sử dụng trong tài liệu này.
+Các kết quả QTDB 512 điểm trong `src/results/` hoặc benchmark BW/EM/MA là bằng chứng cho nhánh thí nghiệm phụ; chúng không thay thế kết quả benchmark 5 mô hình trên common data 3600.
 
 ## 8. Luồng hoạt động
 
 ```text
-LUDB raw
-   │
-   v
-Resample 500 Hz ──> Segment 512 ──> Normalize
-                                          │
-NSTDB bw/em/ma ──> chọn patch + scale ─────┤
-                                          v
-                                  clean/noisy pairs
-                                          │
-                         Conditional DDPM + 1D U-Net
-                                          │
-                              DDPM/DDIM reverse process
-                                          v
-                         ECG 12 đạo trình đã khử nhiễu
-                                          │
-                         metrics + biểu đồ so sánh
+Common QTDB–BW: [N,1,3600], 360 Hz
+                   │
+        train / validation / test cố định
+                   │
+        noisy-derived shared normalization
+                   │
+        Conditional DDPM + HNF U-Net
+                   │
+          train/resume đến 400 epoch
+                   │
+       validation-best EMA checkpoint
+                   │
+           DDIM 50-step, 1-shot
+                   │
+          proposed_seed2024.npz
+                   │
+      benchmark chung với 4 mô hình khác
 ```
 
-Các lệnh chính:
+Notebook chính:
 
-```powershell
-python run_workflow.py --mode preprocess
-python run_workflow.py --mode train --model 1
-python run_workflow.py --mode infer
-python run_workflow.py --mode eval
+```text
+notebooks/kaggle_proposed_conditional_ddpm_3600.ipynb
 ```
 
 ## 9. Hiện trạng và hạn chế cần xử lý
 
-1. **Split dữ liệu chưa nhất quán:** `preprocess` đánh dấu các record LUDB 180–200 làm test, nhưng `train_model` gọi lại `Data_Preparation` không truyền danh sách này. Hàm sau đó dùng danh sách tên record của nguồn dữ liệu khác, có thể khiến test LUDB rỗng và đưa record dự kiến làm test vào train.
-2. **Nguy cơ leakage train/validation:** các cửa sổ chồng lấp được tạo trước, rồi mới chia train/validation ngẫu nhiên. Hai tập có thể chứa các đoạn gần như giống nhau từ cùng record.
-3. **Tham số `n_type` không có tác dụng:** `Data_Preparation` nhận tham số này nhưng bộ tổng hợp hiện chọn ngẫu nhiên `bw`, `em`, `ma` và không dùng `n_type`.
-4. **Scheduler không giảm learning rate:** `StepLR` đặt `gamma=1.0`, nên learning rate giữ nguyên dù tài liệu cũ mô tả có decay.
-5. **EMA chưa tham gia inference:** shadow weights được cập nhật nhưng không được áp vào model validation, không được lưu riêng và không được nạp khi suy luận.
-6. **Hai loss lệch thang đo:** L1 dùng `reduction='sum'`, còn STFT dùng mean; hệ số 0.1 chưa thể hiện rõ đóng góp thực tế của miền tần số.
-7. **Alpha trong STFT loss chưa hoàn toàn nhất quán:** \(x_t\) dùng mức alpha liên tục được lấy mẫu trong khoảng timestep, nhưng \(\hat x_0\) lại dùng alpha rời rạc theo chỉ số \(t\).
-8. **Noise đa đạo trình còn đơn giản:** cùng một noise patch được cộng vào cả 12 lead và scale theo công suất chung; điều này chưa mô phỏng đầy đủ sự khác biệt artifact giữa các điện cực.
-9. **Thiếu khả năng tái lập:** chưa lưu manifest gồm record, split, vị trí/loại noise, delta, seed, phiên bản preprocessing và code commit.
-10. **Định nghĩa PRD chưa chuẩn:** mẫu số hiện phụ thuộc tín hiệu dự đoán thay vì năng lượng tín hiệu sạch quanh giá trị trung bình, nên khó so sánh với nghiên cứu khác.
-11. **Chưa có benchmark LUDB hoàn chỉnh:** thiếu kết quả trên toàn test set, baseline công bằng, phân tầng theo loại/cường độ nhiễu, latency, nhiều seed và thống kê theo record.
-12. **Repo chưa tự chứa dữ liệu:** các thư mục dữ liệu đang trống và bị `.gitignore`; muốn chạy lại cần đặt LUDB và NSTDB đúng cấu trúc.
+1. **Một đạo trình:** kết quả không được diễn giải như mô hình ECG đa đạo trình.
+2. **Nhiễu tổng hợp:** hiệu năng QTDB–BW không tự động đại diện cho mọi nhiễu thực tế, thiết bị hoặc bệnh viện.
+3. **Dữ liệu chung là nguồn chuẩn:** mọi mô hình phải dùng đúng common NPZ/manifest; tự tạo split hoặc nhiễu riêng làm mất tính công bằng.
+4. **Không test leakage:** checkpoint chỉ được chọn bằng validation loss; test chỉ được mở sau khi khóa model.
+5. **Loss khác thang đo:** L1 dùng `reduction='sum'`, còn STFT dùng mean. Raw loss không phải MAE và không dùng để so giữa chiều dài/batch size khác nhau.
+6. **Alpha trong STFT loss:** cần tiếp tục kiểm toán tính nhất quán giữa alpha liên tục dùng tạo \(x_t\) và alpha dùng khôi phục \(\hat x_0\).
+7. **Metric thống nhất:** PRD, SNR và mọi metric phải được tính lại trong notebook benchmark chung, không lấy trực tiếp từ log riêng của từng mô hình.
+8. **Tái lập:** phải lưu data fingerprint, manifest, source hash, checkpoint hash, seed, cấu hình sampler và thứ tự sample ID.
+9. **Nhiều seed:** một lần train với seed 2024 chưa phản ánh bất định giữa nhiều lần huấn luyện.
+10. **Hai nhánh khác nhau:** kết quả QTDB 512 BW/EM/MA phải báo cáo riêng, không gộp với benchmark 3600.
 
 ## 10. Kết luận
 
-Nghiên cứu chính là hệ thống khử nhiễu **ECG LUDB 12 đạo trình** bằng Conditional DDPM. Đóng góp kỹ thuật nằm ở 1D U-Net kết hợp HNF đa tỉ lệ, FiLM theo mức diffusion, self-attention và loss thời gian–tần số; DDIM được dùng để giảm chi phí suy luận.
+Nghiên cứu chính là hệ thống khử nhiễu **ECG QTDB một đạo trình** bằng Conditional DDPM. Benchmark chính sử dụng common QTDB–BW data dài 3600 điểm ở 360 Hz để bảo đảm năm mô hình học và được chấm trên cùng dữ liệu. Đóng góp kỹ thuật nằm ở 1D U-Net kết hợp HNF đa tỉ lệ, FiLM theo mức diffusion, self-attention, loss thời gian–tần số, EMA và DDIM.
 
-Pipeline đã có đủ các khối từ tiền xử lý đến inference, nhưng chưa sẵn sàng để đưa ra kết luận thực nghiệm đáng tin cậy. Ưu tiên tiếp theo là sửa split theo record, loại bỏ leakage, chuẩn hóa loss/EMA/scheduler/PRD, lưu manifest dữ liệu và thực hiện benchmark LUDB đầy đủ trên ba loại artifact.
+Kết luận thực nghiệm cuối cùng chỉ được đưa ra sau khi `proposed_seed2024.npz` và bốn prediction file còn lại được đánh giá bằng cùng notebook benchmark, cùng `sample_id` và cùng định nghĩa metric. Nhánh QTDB 512 điểm cho BW/EM/MA là thí nghiệm bổ sung và phải được báo cáo riêng.

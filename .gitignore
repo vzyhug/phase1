@@ -11,3 +11,7 @@ __pycache__/
 # The user can modify this if needed.
 data/
 checkpoints/
+
+# Generated QTDB datasets kept locally; GitHub rejects files over 100 MB.
+common_qtdb_bw_3600.npz
+common_qtdb_mixed_bwem_ma_3600_ntype1.npz
