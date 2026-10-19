@@ -1,0 +1,22 @@
+{
+  "kind": "method_schematics_not_experimental_results",
+  "config": {
+    "length": 512,
+    "ecg_channels": 1,
+    "base_features": 80,
+    "embedding": 128,
+    "attention_heads": 4
+  },
+  "source_sha256": {
+    "src/models/unet_1d.py": "2e226d29ab33f46b3603c5f2ac21d93c67c7204a0f4f25e216301137153ee4a9",
+    "src/models/blocks/hnf_block.py": "4d48ecdbbda1a6eb2424fad580e719aa3fc40dff3f3a415a68aaf9ac1a1f1ff6",
+    "src/models/blocks/bridge_block.py": "13404db64ea2908b686c1b7e0589db8cbb44dc4bf99e90a5621139f7ae4dd4f4",
+    "src/models/blocks/attention_1d.py": "6a51885a14b70f39b383752d328423fca6e68bfeb32478063cadd81d92d27842",
+    "notebooks/kaggle_ablation_u4_all_noise_512_100ep.ipynb": "5e526eb86e19b687e750af785cf507305ead24466541d9c632e960017c7c8052"
+  },
+  "figures": [
+    "fig01_system",
+    "fig02_architecture",
+    "fig03_blocks"
+  ]
+}
