@@ -1,0 +1,99 @@
+7.5s 1 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+7.5s 2 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+7.5s 3 0.00s - to python to disable frozen modules.
+7.5s 4 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+8.1s 5 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+8.1s 6 0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+8.1s 7 0.00s - to python to disable frozen modules.
+8.1s 8 0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+11.8s 9 [?25l   [90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0.0/163.9 kB[0m [31m?[0m eta [36m-:--:--[0m[2K   [90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m163.9/163.9 kB[0m [31m7.1 MB/s[0m eta [36m0:00:00[0m
+14.2s 10 [?25hNote: you may need to restart the kernel to use updated packages.
+23.8s 11 GPU: Tesla T4 | output: /kaggle/working/qtdb_u2_all_noise_512_100ep
+25.5s 12 U2 preflight: (2, 1, 512) | parameters: 6920161
+250.8s 13 Traceback (most recent call last):
+250.8s 14 File "<string>", line 1, in <module>
+250.8s 15 import sys;import papermill as pm;pm.execute_notebook("__notebook__.ipynb","__notebook__.ipynb",progress_bar=False,log_output=True,stdout_file=sys.stdout,stderr_file=sys.stderr,allow_errors=False,timeout=43200)
+250.8s 16 ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+250.8s 17 File "/usr/local/lib/python3.13/dist-packages/papermill/execute.py", line 131, in execute_notebook
+250.8s 18 raise_for_execution_errors(nb, output_path)
+250.8s 19 ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+250.8s 20 File "/usr/local/lib/python3.13/dist-packages/papermill/execute.py", line 251, in raise_for_execution_errors
+250.8s 21 raise error
+250.8s 22 papermill.exceptions.PapermillExecutionError:
+250.8s 23 ---------------------------------------------------------------------------
+250.8s 24 Exception encountered at "In [7]":
+250.8s 25 ---------------------------------------------------------------------------
+250.8s 26 NetFileError                              Traceback (most recent call last)
+250.8s 27 /tmp/ipykernel_23/3227534588.py in <cell line: 0>()
+250.8s 28 18     beats, rows, audits = [], [], []
+250.8s 29 19     for record_name in tqdm(TRAIN_RECORDS, desc='QTDB train records'):
+250.8s 30 ---> 20         record_beats, record_rows, audit = clean_segments_for_record(record_name)
+250.8s 31 21         beats.extend(record_beats)
+250.8s 32 22         rows.extend(record_rows)
+250.8s 33 
+250.8s 34 /tmp/ipykernel_23/2294335421.py in clean_segments_for_record(name)
+250.8s 35 21
+250.8s 36 22 def clean_segments_for_record(name):
+250.8s 37 ---> 23     record = wfdb.rdrecord(name, pn_dir=PHYSIONET_QT, channels=[0])
+250.8s 38 24     # QTDB does not provide .atr for every record (e.g. sel30).
+250.8s 39 25     # .pu1 provides P boundaries and beat fiducials throughout each record.
+250.8s 40 
+250.8s 41 /usr/local/lib/python3.13/dist-packages/wfdb/io/record.py in rdrecord(record_name, sampfrom, sampto, channels, physical, pn_dir, m2s, smooth_frames, ignore_skew, return_res, force_channels, channel_names, warn_empty)
+250.8s 42 2050             )
+250.8s 43 2051
+250.8s 44 -> 2052     record = rdheader(record_name, pn_dir=pn_dir, rd_segments=False)
+250.8s 45 2053
+250.8s 46 2054     # Set defaults for sampto and channels input variables
+250.8s 47 
+250.8s 48 /usr/local/lib/python3.13/dist-packages/wfdb/io/record.py in rdheader(record_name, pn_dir, rd_segments)
+250.8s 49 1849             )
+250.8s 50 1850
+250.8s 51 -> 1851         header_content = download._stream_header(file_name, pn_dir)
+250.8s 52 1852
+250.8s 53 1853     # If it isn't a cloud path or a PhysioNet path, we treat as a local file
+250.8s 54 
+250.8s 55 /usr/local/lib/python3.13/dist-packages/wfdb/io/download.py in _stream_header(file_name, pn_dir)
+250.8s 56 106     # Get the content of the remote file
+250.8s 57 107     with _url.openurl(url, "rb") as f:
+250.8s 58 --> 108         content = f.read()
+250.8s 59 109
+250.8s 60 110     return content.decode("iso-8859-1")
+250.8s 61 
+250.8s 62 /usr/local/lib/python3.13/dist-packages/wfdb/io/_url.py in read(self, size)
+250.8s 63 578             raise ValueError("invalid size: %r" % (size,))
+250.8s 64 579
+250.8s 65 --> 580         result = b"".join(self._read_range(start, end))
+250.8s 66 581         self._pos += len(result)
+250.8s 67 582         return result
+250.8s 68 
+250.8s 69 /usr/local/lib/python3.13/dist-packages/wfdb/io/_url.py in _read_range(self, start, end)
+250.8s 70 471                 buffer_store = True
+250.8s 71 472
+250.8s 72 --> 473         with RangeTransfer(self._current_url, req_start, req_end) as xfer:
+250.8s 73 474             # Update current file URL.
+250.8s 74 475             self._current_url = xfer.response_url
+250.8s 75 
+250.8s 76 /usr/local/lib/python3.13/dist-packages/wfdb/io/_url.py in __init__(self, url, start, end)
+250.8s 77 165         self._content_iter = self._response.iter_content(4096)
+250.8s 78 166         try:
+250.8s 79 --> 167             self._parse_headers(method, self._response)
+250.8s 80 168         except Exception:
+250.8s 81 169             self.close()
+250.8s 82 
+250.8s 83 /usr/local/lib/python3.13/dist-packages/wfdb/io/_url.py in _parse_headers(self, method, response)
+250.8s 84 211             else:
+250.8s 85 212                 cls = NetFileError
+250.8s 86 --> 213             raise cls(
+250.8s 87 214                 "%s Error: %s for url: %s"
+250.8s 88 215                 % (response.status_code, response.reason, response.url),
+250.8s 89 
+250.8s 90 NetFileError: 502 Error: Bad Gateway for url: https://physionet.org/files/qtdb/1.0.0/sel16773.hea
+250.8s 91 
+253.0s 92 /usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+253.0s 93 cells[i][c] = re.sub('\\\\\|', '|', cell)
+253.1s 94 /usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+253.1s 95 text = re.sub(r'_', '\_', text) # Escape underscores in display text
+253.9s 96 [NbConvertApp] Converting notebook __notebook__.ipynb to notebook
+253.9s 97 [NbConvertApp] Writing 95058 bytes to __notebook__.ipynb
+256.5s 98 [NbConvertApp] Converting notebook __notebook__.ipynb to html
+257.2s 99 [NbConvertApp] Writing 562982 bytes to __results__.html

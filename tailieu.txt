@@ -1,0 +1,57 @@
+[1] N. V. Thakor and Y.-S. Zhu, “Applications of adaptive filtering to
+ECG analysis: noise cancellation and arrhythmia detection,” IEEE
+Trans. Biomed. Eng., vol. 38, no. 8, pp. 785–794, Aug. 1991, doi:
+10.1109/10.83591.
+[2] F. P. Romero, L. V. Romaguera, C. R. Vázquez-Seisdedos, C. F. F. C.
+Filho, M. G. F. Costa, and J. E. Neto, “Baseline wander removal methods
+for ECG signals: A comparative study,” Jul. 2019, arXiv:1807.11359,
+doi: 10.48550/arXiv.1807.11359.
+[3] W. Chorney, H. Wang, L. He, S. Lee, and L.-W. Fan, “Convolu-
+tional block attention autoencoder for denoising electrocardiograms,”
+Biomed. Signal Process. Control, vol. 86, p. 105242, Sep. 2023, doi:
+10.1016/j.bspc.2023.105242.
+[4] K. Antczak, “Deep Recurrent Neural Networks for ECG Signal Denois-
+ing,” Jan. 2019, arXiv:1807.11551, doi: 10.48550/arXiv.1807.11551.
+[5] F. P. Romero, D. C. Pi˜nol, and C. R. V. Seisdedos, “DeepFilter: an
+ECG baseline wander removal filter using deep learning techniques,”
+Jan. 2021, arXiv:2101.03423, doi: 10.48550/arXiv.2101.03423.
+[6] J. Song, C. Meng, and S. Ermon, “Denoising Diffusion Implicit Models,”
+Oct. 2022, arXiv:2010.02502, doi: 10.48550/arXiv.2010.02502.
+[7] H. Li, G. Ditzler, J. Roveda, and A. Li, “DeScoD-ECG: Deep Score-
+Based Diffusion Model for ECG Baseline Wander and Noise Removal,”
+IEEE J. Biomed. Health Inform., vol. 28, no. 9, pp. 5081–5091, Sep.
+2024, doi: 10.1109/JBHI.2023.3237712.
+[8] W. Hao, Y. Chen, and Y. Xin, “ECG baseline wander correction by
+mean-median filter and discrete wavelet transform,” in Proc. Annu. Int.
+Conf. IEEE Eng. Med. Biol. Soc. (EMBC), Aug. 2011, pp. 2712–2715,
+doi: 10.1109/IEMBS.2011.6090744.
+[9] M. Ma, C. Liu, Y. Mu, J. Chen, and L. Zhu, “EFIB-Net: Information
+Bottleneck-Guided Multi-Resolution Attention Network for Robust ECG
+Denoising,” Appl. Sci., vol. 16, no. 13, p. 6401, Jan. 2026, doi:
+10.3390/app16136401.
+[10] M. Chen et al., “Elimination of Random Mixed Noise in ECG Us-
+ing Convolutional Denoising Autoencoder With Transformer Encoder,”
+IEEE J. Biomed. Health Inform., vol. 28, no. 4, pp. 1993–2004, Apr.
+2024, doi: 10.1109/JBHI.2024.3355960.
+[11] V. de Pinto, “Filters for the reduction of baseline wander and muscle
+artifact in the ECG,” J. Electrocardiol., vol. 25, pp. 40–48, Jan. 1992,
+doi: 10.1016/0022-0736(92)90060-D.
+[12] H.-T. Chiang, Y.-Y. Hsieh, S.-W. Fu, K.-H. Hung, Y. Tsao, and S.-Y.
+Chien, “Noise Reduction in ECG Signals Using Fully Convolutional
+Denoising Autoencoders,” IEEE Access, vol. 7, pp. 60806–60813, 2019,
+doi: 10.1109/ACCESS.2019.2912036.
+[13] T. Pollard et al., “PhysioNet as a global platform for biomedical
+research,” Nat. Health, vol. 1, no. 8, pp. 792–795, Mar. 2026, doi:
+10.1038/s44360-026-00096-z.
+[14] P. Li et al., “TFCDiff: Robust ECG Denoising via Time-
+Frequency Complementary Diffusion,” Aug. 2026, arXiv:2511.16627,
+doi: 10.48550/arXiv.2511.16627.
+[15] G. B. Moody, W. Muldrow, and R. G. Mark, “The MIT-BIH Noise Stress
+Test Database,” PhysioNet, 1992, doi: 10.13026/C2HS3T.
+[16] P. Laguna, R. G. Mark, A. L. Goldberger, and G. B. Moody, “The QT
+Database,” PhysioNet, 1997, doi: 10.13026/C24K53.
+[17] S. Ziani, A. Rizal, S. M., and Y. A. Zorgani, “Wavelet-Based Denoising
+of 1-D ECG Signals: Performance Evaluation,” in Artificial Intelligence,
+Data Science and Applications, Y. Farhaoui, A. Hussain, T. Saba, H.
+Taherdoost, and A. Verma, Eds. Cham, Switzerland: Springer, 2024, pp.
+453–458, doi: 10.1007/978-3-031-48465-0_60
